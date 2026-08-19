@@ -1,6 +1,6 @@
 {
   "name": "subatom-infer",
-  "version": "1.0.1",
+  "version": "1.2.1",
   "description": "Production-grade runtime validation and type-inference library for Node.js and TypeScript",
   "type": "module",
   "main": "./dist/index.cjs",
