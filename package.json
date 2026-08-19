@@ -1,6 +1,6 @@
 {
   "name": "subatom-infer",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "license": "MIT",
   "description": "Production-grade runtime validation and type-inference library for Node.js and TypeScript",
   "type": "module",
@@ -19,7 +19,7 @@
     "tests"
   ],
   "scripts": {
-    "build": "tsdown src/index.ts --format esm,cjs --dts --sourcemap --clean",
+    "build": "tsdown index.ts --format esm,cjs --dts --sourcemap --clean",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --coverage",
     "test:watch": "vitest",

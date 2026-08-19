@@ -48,7 +48,7 @@ import infer, {
   type Infer,
   type Input,
   type Output,
-} from "../src/index.js";
+} from "../index.js";
 import { RawShape } from "../src/schemas/composites/object.js";
 
 describe("Root Index & infer API Facade", () => {
