@@ -14,16 +14,19 @@
     }
   },
   "files": [
-    "dist",
-    "tests"
+    "dist"
   ],
   "scripts": {
-"build": "tsdown src/index.ts --format esm --dts --sourcemap --clean",
+    "build": "tsdown src/index.ts --format esm,cjs --dts --sourcemap --clean",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --coverage",
     "test:watch": "vitest",
     "lint": "eslint .",
     "prepublishOnly": "npm run typecheck && npm run build && npm test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/subatomjs/subatom-infer"
   },
   "devDependencies": {
     "@types/node": "^26.2.0",
