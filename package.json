@@ -14,7 +14,8 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "tests"
   ],
   "scripts": {
     "build": "tsdown src/index.ts --format esm,cjs --dts --sourcemap --clean",
