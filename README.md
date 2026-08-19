@@ -9,6 +9,14 @@
 
 ---
 
+## 📖 Documentation
+
+[![Documentation](https://img.shields.io/badge/docs-infer.subatomjs.dev-38bdf8?style=for-the-badge&logo=googledocs&logoColor=white)](https://infer.subatomjs.dev/)
+
+
+For complete guides, API references, and interactive examples, visit the [Official Documentation](https://infer.subatomjs.dev/).
+
+---
 ## ⚡ Highlights & Key Architecture
 
 - **🚀 Dual Pipeline Execution:** Synchronous execution throws when encountering async refinements/transforms; asynchronous pipeline evaluates fully non-blocking.
@@ -376,3 +384,4 @@ type ProductInput = Input<typeof ProductSchema>;
 ## 📄 License
 
 Distributed under the **MIT License**. See `LICENSE` for more information.
+
