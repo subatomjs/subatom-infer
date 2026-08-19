@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Subatom Infer — Complete API Reference & Developer Guide</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts for JetBrains Mono & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ["Inter", "sans-serif"],
+              mono: ["JetBrains Mono", "monospace"],
+            },
+            colors: {
+              brand: {
+                50: "#f0f9ff",
+                100: "#e0f2fe",
+                500: "#0ea5e9",
+                600: "#0284c7",
+                700: "#0369a1",
+                900: "#0c4a6e",
+              },
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      @page {
+        size: letter;
+        margin: 15mm;
+        @bottom-right {
+          content: "Page " counter(page) " of " counter(pages);
+          font-size: 8pt;
+          font-family: "Inter", sans-serif;
+          color: #94a3b8;
+        }
+        @bottom-left {
+          content: "Subatom Infer — Developer Specification";
+          font-size: 8pt;
+          font-family: "Inter", sans-serif;
+          color: #94a3b8;
+        }
+      }
+
+      .page-break {
+        page-break-before: always;
+      }
+
+      .no-break {
+        page-break-inside: avoid;
+      }
+
+      pre code {
+        font-family: "JetBrains Mono", monospace;
+      }
+    </style>
+  </head>
+
+  <body
+    class="bg-slate-50 text-slate-800 font-sans antialiased text-[13px] leading-relaxed print:bg-white print:text-slate-900"
+  >
+    <div class="max-w-5xl mx-auto p-6 md:p-10 space-y-8">
+      <!-- HEADER / HERO SECTION -->
+      <header class="border-b border-slate-200 pb-6 no-break">
+        <div
+          class="flex flex-wrap items-center justify-between gap-4 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3"
+        >
+          <span
+            class="inline-flex items-center gap-1.5 bg-brand-50 text-brand-700 px-2.5 py-1 rounded-md border border-brand-100 font-mono"
+          >
+            <span
+              class="w-2 h-2 rounded-full bg-brand-500 animate-pulse"
+            ></span>
+            subatom-infer
+          </span>
+          <div class="flex gap-4 font-mono text-[11px]">
+            <span>Node.js >= 18 LTS</span>
+            <span>TypeScript >= 5.0 Strict</span>
+            <span class="text-emerald-600">Pure ESM/CJS</span>
+          </div>
+        </div>
+
+        <h1
+          class="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight"
+        >
+          Subatom Infer
+          <span class="text-brand-600 font-normal">Reference Manual</span>
+        </h1>
+        <p class="mt-2 text-slate-600 text-sm max-w-3xl">
+          High-performance runtime validation, strict schema transformation, and
+          compile-time type inference engine powered by the
+          <code class="text-brand-700 font-semibold font-mono">infer</code>
+          namespace.
+        </p>
+
+        <!-- Architecture Highlight Banner -->
+        <div class="mt-5 grid grid-cols-1 md:grid-cols-4 gap-3">
+          <div
+            class="bg-white border border-slate-200 p-3 rounded-lg shadow-sm"
+          >
+            <div class="text-[11px] font-bold text-slate-400 uppercase">
+              Architecture
+            </div>
+            <div class="text-sm font-bold text-slate-900 mt-0.5">
+              Dual Pipeline
+            </div>
+            <p class="text-[11px] text-slate-500 mt-1">
+              Sync throws on async; Async evaluates non-blocking.
+            </p>
+          </div>
+          <div
+            class="bg-white border border-slate-200 p-3 rounded-lg shadow-sm"
+          >
+            <div class="text-[11px] font-bold text-slate-400 uppercase">
+              Typing
+            </div>
+            <div class="text-sm font-bold text-slate-900 mt-0.5">
+              Schema&lt;Out, In&gt;
+            </div>
+            <p class="text-[11px] text-slate-500 mt-1">
+              Separates input preconditions from validated output.
+            </p>
+          </div>
+          <div
+            class="bg-white border border-slate-200 p-3 rounded-lg shadow-sm"
+          >
+            <div class="text-[11px] font-bold text-slate-400 uppercase">
+              State
+            </div>
+            <div class="text-sm font-bold text-slate-900 mt-0.5">
+              Immutable AST
+            </div>
+            <p class="text-[11px] text-slate-500 mt-1">
+              Zero side-effects, prototype poisoning protection.
+            </p>
+          </div>
+          <div
+            class="bg-white border border-slate-200 p-3 rounded-lg shadow-sm"
+          >
+            <div class="text-[11px] font-bold text-slate-400 uppercase">
+              Diagnostics
+            </div>
+            <div class="text-sm font-bold text-slate-900 mt-0.5">
+              Discriminated AST
+            </div>
+            <p class="text-[11px] text-slate-500 mt-1">
+              Exact JSON paths, key-level issue grouping.
+            </p>
+          </div>
+        </div>
+      </header>
+
+      <!-- SECTION 1: EXECUTION & PARSING METHODS -->
+      <section class="space-y-4 no-break">
+        <div class="flex items-center gap-2">
+          <span
+            class="flex items-center justify-center w-6 h-6 rounded-full bg-brand-600 text-white font-bold text-xs"
+            >1</span
+          >
+          <h2 class="text-lg font-bold text-slate-900 tracking-tight">
+            Core Execution & Parsing Engine
+          </h2>
+        </div>
+
+        <p class="text-slate-600 text-xs">
+          Validation is invoked directly via synchronous and asynchronous
+          methods attached to every schema instance.
+        </p>
+
+        <div
+          class="overflow-hidden border border-slate-200 rounded-lg shadow-sm bg-white"
+        >
+          <table class="w-full text-left border-collapse">
+            <thead
+              class="bg-slate-50 text-[11px] uppercase tracking-wider text-slate-500 border-b border-slate-200"
+            >
+              <tr>
+                <th class="p-2.5 font-bold">Method</th>
+                <th class="p-2.5 font-bold">Return Signature</th>
+                <th class="p-2.5 font-bold">Behavior & Fail Mode</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 text-xs">
+              <tr>
+                <td class="p-2.5 font-mono font-semibold text-brand-700">
+                  .parse(input)
+                </td>
+                <td class="p-2.5 font-mono text-slate-600">TOutput</td>
+                <td class="p-2.5 text-slate-600">
+                  Synchronous. Throws
+                  <code class="text-rose-600 font-mono">ValidationError</code>
+                  if invalid. Throws on async pipelines.
+                </td>
+              </tr>
+              <tr>
+                <td class="p-2.5 font-mono font-semibold text-brand-700">
+                  .safeParse(input)
+                </td>
+                <td class="p-2.5 font-mono text-slate-600">
+                  SafeParseResult&lt;TOutput&gt;
+                </td>
+                <td class="p-2.5 text-slate-600">
+                  Returns
+                  <code class="font-mono text-emerald-600"
+                    >{ success: true, data }</code
+                  >
+                  or
+                  <code class="font-mono text-rose-600"
+                    >{ success: false, error }</code
+                  >.
+                </td>
+              </tr>
+              <tr>
+                <td class="p-2.5 font-mono font-semibold text-brand-700">
+                  .parseAsync(input)
+                </td>
+                <td class="p-2.5 font-mono text-slate-600">
+                  Promise&lt;TOutput&gt;
+                </td>
+                <td class="p-2.5 text-slate-600">
+                  Asynchronous execution. Awaits all async transformations,
+                  refinements, and sub-schemas.
+                </td>
+              </tr>
+              <tr>
+                <td class="p-2.5 font-mono font-semibold text-brand-700">
+                  .safeParseAsync(input) / .spa()
+                </td>
+                <td class="p-2.5 font-mono text-slate-600">
+                  Promise&lt;SafeParseResult&gt;
+                </td>
+                <td class="p-2.5 text-slate-600">
+                  Non-throwing Promise resolving to a strongly typed
+                  success/failure discriminated union.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div
+          class="bg-slate-900 rounded-lg p-3 text-slate-100 font-mono text-[11px] leading-relaxed shadow-md"
+        >
+          <span class="text-slate-400">// Importing the unified namespace</span
+          ><br />
+          <span class="text-purple-400">import</span> { infer,
+          <span class="text-purple-400">type</span> Infer }
+          <span class="text-purple-400">from</span>
+          <span class="text-emerald-300">"subatom-infer"</span>;<br /><br />
+          <span class="text-purple-400">const</span> User = infer.object({<br />
+          &nbsp;&nbsp;id: infer.uuid(),<br />
+          &nbsp;&nbsp;username: infer.string().min(<span class="text-amber-300"
+            >3</span
+          >),<br />
+          });<br /><br />
+          <span class="text-slate-400">// Safe synchronous parsing</span><br />
+          <span class="text-purple-400">const</span> result = User.safeParse({
+          id:
+          <span class="text-emerald-300"
+            >"123e4567-e89b-12d3-a456-426614174000"</span
+          >, username: <span class="text-emerald-300">"alex"</span> });<br />
+          <span class="text-purple-400">if</span> (result.success) {<br />
+          &nbsp;&nbsp;console.log(result.data.username);
+          <span class="text-slate-400">// Typed as string</span><br />
+          }
+        </div>
+      </section>
+
+      <!-- SECTION 2: PRIMITIVES & STRING FORMAT VALIDATORS -->
+      <section class="space-y-4 no-break">
+        <div class="flex items-center gap-2">
+          <span
+            class="flex items-center justify-center w-6 h-6 rounded-full bg-brand-600 text-white font-bold text-xs"
+            >2</span
+          >
+          <h2 class="text-lg font-bold text-slate-900 tracking-tight">
+            Primitives, Unit Types & String Validation API
+          </h2>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Primitives Card -->
+          <div
+            class="bg-white border border-slate-200 rounded-lg p-4 shadow-sm space-y-2"
+          >
+            <h3
+              class="text-xs font-bold uppercase tracking-wider text-slate-500"
+            >
+              Core Primitives & Singletons
+            </h3>
+            <div
+              class="bg-slate-900 rounded p-2.5 font-mono text-[10.5px] text-slate-100 leading-snug"
+            >
+              infer.string()<br />
+              infer.number()<br />
+              infer.boolean()<br />
+              infer.bigint()<br />
+              infer.date()<br />
+              infer.symbol()<br />
+              infer.undefined()<br />
+              infer.null()<br />
+              infer.void()<br />
+              infer.any()<br />
+              infer.unknown()<br />
+              infer.never()<br />
+              infer.nan()<br />
+              infer.literal(<span class="text-emerald-300">"ACTIVE"</span>)
+            </div>
+          </div>
+
+          <!-- String Modifiers Card -->
+          <div
+            class="bg-white border border-slate-200 rounded-lg p-4 shadow-sm space-y-2"
+          >
+            <h3
+              class="text-xs font-bold uppercase tracking-wider text-slate-500"
+            >
+              String Formatting & Constraints
+            </h3>
+            <div
+              class="bg-slate-900 rounded p-2.5 font-mono text-[10.5px] text-slate-100 leading-snug"
+            >
+              infer.string()<br />
+              &nbsp;&nbsp;.min(<span class="text-amber-300">5</span>).max(<span
+                class="text-amber-300"
+                >100</span
+              >).length(<span class="text-amber-300">20</span>)<br />
+              &nbsp;&nbsp;.email().url().httpUrl()<br />
+              &nbsp;&nbsp;.uuid().guid().cuid().cuid2()<br />
+              &nbsp;&nbsp;.ulid().nanoid()<br />
+              &nbsp;&nbsp;.regex(<span class="text-amber-300">/^[a-z]+$/i</span
+              >)<br />
+              &nbsp;&nbsp;.startsWith(<span class="text-emerald-300"
+                >"sub_"</span
+              >).endsWith(<span class="text-emerald-300">"_node"</span>)<br />
+              &nbsp;&nbsp;.includes(<span class="text-emerald-300">"@"</span
+              >)<br />
+              &nbsp;&nbsp;.datetime().date().time().duration()<br />
+              &nbsp;&nbsp;.ipv4().ipv6().hostname()<br />
+              &nbsp;&nbsp;.trim().toLowerCase().toUpperCase()
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 3: NUMBERS, BIGINT & NUMERIC ASSERTIONS -->
+      <section class="space-y-4 no-break">
+        <div class="flex items-center gap-2">
+          <span
+            class="flex items-center justify-center w-6 h-6 rounded-full bg-brand-600 text-white font-bold text-xs"
+            >3</span
+          >
+          <h2 class="text-lg font-bold text-slate-900 tracking-tight">
+            Number & BigInt Validation Constraints
+          </h2>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div
+            class="bg-white border border-slate-200 rounded-lg p-4 shadow-sm space-y-2"
+          >
+            <h3
+              class="text-xs font-bold uppercase tracking-wider text-slate-500"
+            >
+              Number Schema Constraints
+            </h3>
+            <div
+              class="bg-slate-900 rounded p-2.5 font-mono text-[10.5px] text-slate-100 leading-snug"
+            >
+              infer.number()<br />
+              &nbsp;&nbsp;.int()<span class="text-slate-500">
+                // Integer only</span
+              ><br />
+              &nbsp;&nbsp;.safe()<span class="text-slate-500">
+                // Safe IEEE-754 range</span
+              ><br />
+              &nbsp;&nbsp;.finite()<span class="text-slate-500">
+                // Rejects Infinity</span
+              ><br />
+              &nbsp;&nbsp;.positive()<span class="text-slate-500"> // &gt; 0</span
+              ><br />
+              &nbsp;&nbsp;.nonnegative()<span class="text-slate-500">
+                // &gt;= 0</span
+              ><br />
+              &nbsp;&nbsp;.negative()<span class="text-slate-500"> // &lt; 0</span
+              ><br />
+              &nbsp;&nbsp;.nonpositive()<span class="text-slate-500">
+                // &lt;= 0</span
+              ><br />
+              &nbsp;&nbsp;.min(<span class="text-amber-300">1</span>).max(<span
+                class="text-amber-300"
+                >100</span
+              >)<br />
+              &nbsp;&nbsp;.gte(<span class="text-amber-300">1</span>).lte(<span
+                class="text-amber-300"
+                >100</span
+              >)<br />
+              &nbsp;&nbsp;.gt(<span class="text-amber-300">0</span>).lt(<span
+                class="text-amber-300"
+                >101</span
+              >)<br />
+              &nbsp;&nbsp;.multipleOf(<span class="text-amber-300">5</span>)
+            </div>
+          </div>
+
+          <div
+            class="bg-white border border-slate-200 rounded-lg p-4 shadow-sm space-y-2"
+          >
+            <h3
+              class="text-xs font-bold uppercase tracking-wider text-slate-500"
+            >
+              BigInt Schema Constraints
+            </h3>
+            <div
+              class="bg-slate-900 rounded p-2.5 font-mono text-[10.5px] text-slate-100 leading-snug"
+            >
+              infer.bigint()<br />
+              &nbsp;&nbsp;.positive()<span class="text-slate-500"> // &gt; 0n</span
+              ><br />
+              &nbsp;&nbsp;.nonnegative()<span class="text-slate-500">
+                // &gt;= 0n</span
+              ><br />
+              &nbsp;&nbsp;.negative()<span class="text-slate-500"> // &lt; 0n</span
+              ><br />
+              &nbsp;&nbsp;.nonpositive()<span class="text-slate-500">
+                // &lt;= 0n</span
+              ><br />
+              &nbsp;&nbsp;.min(<span class="text-amber-300">100n</span>)<br />
+              &nbsp;&nbsp;.max(<span class="text-amber-300">1000000n</span
+              >)<br />
+              &nbsp;&nbsp;.multipleOf(<span class="text-amber-300">10n</span>)
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PAGE BREAK -->
+      <div class="page-break"></div>
+
+      <!-- SECTION 4: OBJECTS & STRUCTURAL POLICIES -->
+      <section class="space-y-4 no-break">
+        <div class="flex items-center gap-2">
+          <span
+            class="flex items-center justify-center w-6 h-6 rounded-full bg-brand-600 text-white font-bold text-xs"
+            >4</span
+          >
+          <h2 class="text-lg font-bold text-slate-900 tracking-tight">
+            Objects & Structural Policies
+          </h2>
+        </div>
+
+        <p class="text-slate-600 text-xs">
+          Objects offer manipulation primitives, structural modifiers, key
+          policies, and recursive transformations.
+        </p>
+
+        <div
+          class="bg-slate-900 rounded-lg p-3 text-slate-100 font-mono text-[11px] leading-relaxed shadow-md"
+        >
+          <span class="text-purple-400">const</span> BaseUser =
+          infer.object({<br />
+          &nbsp;&nbsp;id: infer.uuid(),<br />
+          &nbsp;&nbsp;name: infer.string(),<br />
+          &nbsp;&nbsp;role: infer.enum([<span class="text-emerald-300"
+            >"admin"</span
+          >, <span class="text-emerald-300">"user"</span>]),<br />
+          });<br /><br />
+          <span class="text-slate-400">// Object Policy Modifiers</span><br />
+          <span class="text-purple-400">const</span> StrictUser =
+          BaseUser.strict();
+          <span class="text-slate-400">// Rejects unrecognized keys</span><br />
+          <span class="text-purple-400">const</span> LooseUser =
+          BaseUser.passthrough();
+          <span class="text-slate-400">// Retains unknown keys</span><br />
+          <span class="text-purple-400">const</span> StrippedUser =
+          BaseUser.strip();
+          <span class="text-slate-400">// Default: strips extra properties</span
+          ><br />
+          <span class="text-purple-400">const</span> CatchallUser =
+          BaseUser.catchall(infer.boolean());
+          <span class="text-slate-400">// Validates unknown keys</span
+          ><br /><br />
+          <span class="text-slate-400"
+            >// Structural Composition & Transformations</span
+          ><br />
+          <span class="text-purple-400">const</span> ExtendedUser =
+          BaseUser.extend({ email: infer.email() });<br />
+          <span class="text-purple-400">const</span> MergedSchema =
+          BaseUser.merge(infer.object({ traceId: infer.string() }));<br />
+          <span class="text-purple-400">const</span> PickedName =
+          BaseUser.pick({ name:
+          <span class="text-amber-300">true</span> });<br />
+          <span class="text-purple-400">const</span> OmittedId = BaseUser.omit({
+          id: <span class="text-amber-300">true</span> });<br />
+          <span class="text-purple-400">const</span> PartialUser =
+          BaseUser.partial();
+          <span class="text-slate-400">// All fields optional</span><br />
+          <span class="text-purple-400">const</span> RequiredUser =
+          PartialUser.required();
+          <span class="text-slate-400">// All fields required</span><br />
+          <span class="text-purple-400">const</span> DeepOptional =
+          BaseUser.deepPartial();
+          <span class="text-slate-400">// Recursively optional</span><br />
+          <span class="text-purple-400">const</span> UserKeysEnum =
+          BaseUser.keyof();
+          <span class="text-slate-400">// Returns EnumSchema of keys</span>
+        </div>
+      </section>
+
+      <!-- SECTION 5: COLLECTIONS & DATA STRUCTURES -->
+      <section class="space-y-4 no-break">
+        <div class="flex items-center gap-2">
+          <span
+            class="flex items-center justify-center w-6 h-6 rounded-full bg-brand-600 text-white font-bold text-xs"
+            >5</span
+          >
+          <h2 class="text-lg font-bold text-slate-900 tracking-tight">
+            Collections: Arrays, Tuples, Records, Sets & Maps
+          </h2>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Arrays & Tuples -->
+          <div
+            class="bg-white border border-slate-200 rounded-lg p-4 shadow-sm space-y-2"
+          >
+            <h3
+              class="text-xs font-bold uppercase tracking-wider text-slate-500"
+            >
+              Arrays & Fixed Tuples
+            </h3>
+            <div
+              class="bg-slate-900 rounded p-2.5 font-mono text-[10.5px] text-slate-100 leading-snug"
+            >
+              <span class="text-slate-400">// Array with length bounds</span
+              ><br />
+              <span class="text-purple-400">const</span> Tags =
+              infer.array(infer.string())<br />
+              &nbsp;&nbsp;.min(<span class="text-amber-300">1</span>).max(<span
+                class="text-amber-300"
+                >10</span
+              >).nonempty();<br /><br />
+              <span class="text-slate-400"
+                >// Tuples with positional schemas</span
+              ><br />
+              <span class="text-purple-400">const</span> Coord =
+              infer.tuple([<br />
+              &nbsp;&nbsp;infer.number(),<br />
+              &nbsp;&nbsp;infer.number(),<br />
+              &nbsp;&nbsp;infer.number().optional()<br />
+              ]);
+            </div>
+          </div>
+
+          <!-- Records, Sets & Maps -->
+          <div
+            class="bg-white border border-slate-200 rounded-lg p-4 shadow-sm space-y-2"
+          >
+            <h3
+              class="text-xs font-bold uppercase tracking-wider text-slate-500"
+            >
+              Records, Sets & Maps
+            </h3>
+            <div
+              class="bg-slate-900 rounded p-2.5 font-mono text-[10.5px] text-slate-100 leading-snug"
+            >
+              <span class="text-slate-400">// Dynamic Key-Value Map</span><br />
+              <span class="text-purple-400">const</span> Config =
+              infer.record(<br />
+              &nbsp;&nbsp;infer.string().min(<span class="text-amber-300"
+                >2</span
+              >),<br />
+              &nbsp;&nbsp;infer.number()<br />
+              );<br /><br />
+              <span class="text-slate-400"
+                >// Native JS Set & Map instances</span
+              ><br />
+              <span class="text-purple-400">const</span> Roles =
+              infer.set(infer.string()).min(<span class="text-amber-300">1</span
+              >);<br />
+              <span class="text-purple-400">const</span> Lookup =
+              infer.map(infer.uuid(), infer.boolean());
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 6: COMBINATORS & SPECIAL TYPES -->
+      <section class="space-y-4 no-break">
+        <div class="flex items-center gap-2">
+          <span
+            class="flex items-center justify-center w-6 h-6 rounded-full bg-brand-600 text-white font-bold text-xs"
+            >6</span
+          >
+          <h2 class="text-lg font-bold text-slate-900 tracking-tight">
+            Combinators, Special Schemas & Recursive Types
+          </h2>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Unions & Intersections -->
+          <div
+            class="bg-white border border-slate-200 rounded-lg p-4 shadow-sm space-y-2"
+          >
+            <h3
+              class="text-xs font-bold uppercase tracking-wider text-slate-500"
+            >
+              Tagged & Untagged Unions
+            </h3>
+            <div
+              class="bg-slate-900 rounded p-2.5 font-mono text-[10.5px] text-slate-100 leading-snug"
+            >
+              <span class="text-slate-400"
+                >// Discriminated Union (O(1) matching)</span
+              ><br />
+              <span class="text-purple-400">const</span> Event =
+              infer.discriminatedUnion(<span class="text-emerald-300"
+                >"type"</span
+              >, [<br />
+              &nbsp;&nbsp;infer.object({ type: infer.literal(<span
+                class="text-emerald-300"
+                >"click"</span
+              >), x: infer.number() }),<br />
+              &nbsp;&nbsp;infer.object({ type: infer.literal(<span
+                class="text-emerald-300"
+                >"hover"</span
+              >), element: infer.string() })<br />
+              ]);<br /><br />
+              <span class="text-slate-400">// Union & Intersection</span><br />
+              <span class="text-purple-400">const</span> StrOrNum =
+              infer.union([infer.string(), infer.number()]);<br />
+              <span class="text-purple-400">const</span> Combined =
+              infer.intersection(SchemaA, SchemaB);
+            </div>
+          </div>
+
+          <!-- Special: Function, Promise, File, Lazy -->
+          <div
+            class="bg-white border border-slate-200 rounded-lg p-4 shadow-sm space-y-2"
+          >
+            <h3
+              class="text-xs font-bold uppercase tracking-wider text-slate-500"
+            >
+              Function, Promise, File & Lazy
+            </h3>
+            <div
+              class="bg-slate-900 rounded p-2.5 font-mono text-[10.5px] text-slate-100 leading-snug"
+            >
+              <span class="text-slate-400">// Function Schema</span><br />
+              <span class="text-purple-400">const</span> AddFn =
+              infer.function(<br />
+              &nbsp;&nbsp;infer.tuple([infer.number(), infer.number()]),<br />
+              &nbsp;&nbsp;infer.number()<br />
+              );<br /><br />
+              <span class="text-slate-400"
+                >// Promise, File & Recursive Lazy</span
+              ><br />
+              <span class="text-purple-400">const</span> AsyncStr =
+              infer.promise(infer.string());<br />
+              <span class="text-purple-400">const</span> Upload =
+              infer.file().max(<span class="text-amber-300">5_000_000</span
+              >).mime(<span class="text-emerald-300">"image/png"</span>);<br />
+              <span class="text-purple-400">const</span> Node = infer.lazy(() =>
+              infer.object({<br />
+              &nbsp;&nbsp;next: Node.optional()<br />
+              }));
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PAGE BREAK -->
+      <div class="page-break"></div>
+
+      <!-- SECTION 7: MODIFIERS, PIPELINE & REFINEMENTS -->
+      <section class="space-y-4 no-break">
+        <div class="flex items-center gap-2">
+          <span
+            class="flex items-center justify-center w-6 h-6 rounded-full bg-brand-600 text-white font-bold text-xs"
+            >7</span
+          >
+          <h2 class="text-lg font-bold text-slate-900 tracking-tight">
+            Modifiers, Pipelines, Codecs & Refinements
+          </h2>
+        </div>
+
+        <div
+          class="bg-slate-900 rounded-lg p-3 text-slate-100 font-mono text-[11px] leading-relaxed shadow-md"
+        >
+          <span class="text-slate-400">// 1. Modifiers & Defaults</span><br />
+          <span class="text-purple-400">const</span> OptStr =
+          infer.string().optional();
+          <span class="text-slate-400">// string | undefined</span><br />
+          <span class="text-purple-400">const</span> NullableNum =
+          infer.number().nullable();
+          <span class="text-slate-400">// number | null</span><br />
+          <span class="text-purple-400">const</span> NullishDate =
+          infer.date().nullish();
+          <span class="text-slate-400">// Date | null | undefined</span><br />
+          <span class="text-purple-400">const</span> DefaultPort =
+          infer.number().default(<span class="text-amber-300">3000</span
+          >);<br />
+          <span class="text-purple-400">const</span> PrefaultVal =
+          infer.string().prefault(<span class="text-emerald-300"
+            >"anonymous"</span
+          >);<br />
+          <span class="text-purple-400">const</span> SafeValue =
+          infer.number().catch(<span class="text-amber-300">0</span
+          >);<br /><br />
+
+          <span class="text-slate-400"
+            >// 2. Transformation Pipeline & Pipe</span
+          ><br />
+          <span class="text-purple-400">const</span> StrToDate =
+          infer.string().transform((val) =>
+          <span class="text-purple-400">new</span> Date(val));<br />
+          <span class="text-purple-400">const</span> PipedValidation =
+          infer.pipe(infer.string().min(<span class="text-amber-300">2</span>),
+          infer.string().email());<br /><br />
+
+          <span class="text-slate-400">// 3. Refinements & SuperRefine</span
+          ><br />
+          <span class="text-purple-400">const</span> PasswordCheck =
+          infer.object({<br />
+          &nbsp;&nbsp;password: infer.string().min(<span class="text-amber-300"
+            >8</span
+          >),<br />
+          &nbsp;&nbsp;confirm: infer.string()<br />
+          }).superRefine((data, ctx) => {<br />
+          &nbsp;&nbsp;<span class="text-purple-400">if</span> (data.password !==
+          data.confirm) {<br />
+          &nbsp;&nbsp;&nbsp;&nbsp;ctx.addIssue({ code:
+          <span class="text-emerald-300">"custom"</span>, message:
+          <span class="text-emerald-300">"Passwords must match"</span> });<br />
+          &nbsp;&nbsp;}<br />
+          });<br /><br />
+
+          <span class="text-slate-400"
+            >// 4. Nominal Branding & Bidirectional Codecs</span
+          ><br />
+          <span class="text-purple-400">const</span> UserIdSchema =
+          infer.brand(infer.uuid(),
+          <span class="text-emerald-300">"UserId"</span>);<br />
+          <span class="text-purple-400">const</span> Base64Codec =
+          infer.codec(<br />
+          &nbsp;&nbsp;infer.string().transform((str) => Buffer.from(str,
+          <span class="text-emerald-300">"base64"</span>)),<br />
+          &nbsp;&nbsp;(buf: Buffer) => buf.toString(<span
+            class="text-emerald-300"
+            >"base64"</span
+          >)<br />
+          );
+        </div>
+      </section>
+
+      <!-- SECTION 8: COERCION & ERROR FORMATTING -->
+      <section class="space-y-4 no-break">
+        <div class="flex items-center gap-2">
+          <span
+            class="flex items-center justify-center w-6 h-6 rounded-full bg-brand-600 text-white font-bold text-xs"
+            >8</span
+          >
+          <h2 class="text-lg font-bold text-slate-900 tracking-tight">
+            Coercion Engine & Error Formatting API
+          </h2>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Coercion -->
+          <div
+            class="bg-white border border-slate-200 rounded-lg p-4 shadow-sm space-y-2"
+          >
+            <h3
+              class="text-xs font-bold uppercase tracking-wider text-slate-500"
+            >
+              Primitive Coercion
+            </h3>
+            <div
+              class="bg-slate-900 rounded p-2.5 font-mono text-[10.5px] text-slate-100 leading-snug"
+            >
+              infer.coerce.string()<br />
+              infer.coerce.number().int()<br />
+              infer.coerce.boolean()<br />
+              infer.coerce.bigint()<br />
+              infer.coerce.date()<br /><br />
+              <span class="text-slate-400"
+                >// Automatically parses query strings</span
+              ><br />
+              infer.coerce.number().parse(<span class="text-emerald-300"
+                >"42"</span
+              >); <span class="text-slate-400">// 42 (number)</span>
+            </div>
+          </div>
+
+          <!-- Error Tree -->
+          <div
+            class="bg-white border border-slate-200 rounded-lg p-4 shadow-sm space-y-2"
+          >
+            <h3
+              class="text-xs font-bold uppercase tracking-wider text-slate-500"
+            >
+              Error Tree Formatting
+            </h3>
+            <div
+              class="bg-slate-900 rounded p-2.5 font-mono text-[10.5px] text-slate-100 leading-snug"
+            >
+              <span class="text-purple-400">try</span> {<br />
+              &nbsp;&nbsp;UserSchema.parse(badInput);<br />
+              } <span class="text-purple-400">catch</span> (err) {<br />
+              &nbsp;&nbsp;<span class="text-slate-400"
+                >// Form & field error record</span
+              ><br />
+              &nbsp;&nbsp;err.flatten();<br />
+              &nbsp;&nbsp;<span class="text-slate-400"
+                >// Deeply nested issue tree</span
+              ><br />
+              &nbsp;&nbsp;err.format();<br />
+              &nbsp;&nbsp;<span class="text-slate-400"
+                >// Pretty CLI string format</span
+              ><br />
+              &nbsp;&nbsp;console.log(err.prettifyError());<br />
+              }
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 9: SUMMARY & METADATA -->
+      <section class="border-t border-slate-200 pt-6 no-break">
+        <div
+          class="flex flex-wrap items-center justify-between gap-4 text-xs text-slate-500 font-mono"
+        >
+          <div>Generated by Subatom Library Architect Suite</div>
+          <div>License: MIT • Strict TypeScript Clean Architecture</div>
+        </div>
+      </section>
+    </div>
+  </body>
+</html>
