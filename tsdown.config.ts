@@ -1,10 +1,9 @@
-// tsdown.config.ts
 import { defineConfig } from "tsdown";
 
 export default defineConfig({
-  entry: ["src/**/*.ts",  "index.ts"],
-  bundle: false,
+  entry: ["src/index.ts"],
   format: ["esm", "cjs"],
   dts: true,
+  sourcemap: true,
   clean: true,
 });

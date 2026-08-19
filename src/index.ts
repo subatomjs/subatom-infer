@@ -1,6 +1,6 @@
-import { StringSchema } from "./src/schemas/primitives/string.js";
-import { NumberSchema } from "./src/schemas/primitives/number.js";
-import { BigIntSchema } from "./src/schemas/primitives/bigint.js";
+import { StringSchema } from "./schemas/primitives/string.js";
+import { NumberSchema } from "./schemas/primitives/number.js";
+import { BigIntSchema } from "./schemas/primitives/bigint.js";
 import {
   BooleanSchema,
   DateSchema,
@@ -13,7 +13,7 @@ import {
   SymbolSchema,
   NaNSchema,
   type LiteralValue,
-} from "./src/schemas/primitives/advanced-primitives.js";
+} from "./schemas/primitives/advanced-primitives.js";
 import {
   ArraySchema,
   TupleSchema,
@@ -21,25 +21,25 @@ import {
   SetSchema,
   MapSchema,
   type TupleSchemas,
-} from "./src/schemas/composites/collections.js";
-import { ObjectSchema, type RawShape } from "./src/schemas/composites/object.js";
-import { EnumSchema, NativeEnumSchema } from "./src/schemas/composites/enum.js";
+} from "./schemas/composites/collections.js";
+import { ObjectSchema, type RawShape } from "./schemas/composites/object.js";
+import { EnumSchema, NativeEnumSchema } from "./schemas/composites/enum.js";
 import {
   UnionSchema,
   DiscriminatedUnionSchema,
   IntersectionSchema,
   LazySchema,
   type UnionOptions,
-} from "./src/schemas/composites/combinators.js";
+} from "./schemas/composites/combinators.js";
 import {
   FunctionSchema,
   PromiseSchema,
   FileSchema,
-} from "./src/schemas/spacial/spacial-schema.js";
-import { OptionalSchema } from "./src/schemas/modifiers/optional.js";
-import { NullableSchema } from "./src/schemas/modifiers/nullable.js";
-import { DefaultSchema } from "./src/schemas/modifiers/default.js";
-import { PrefaultSchema } from "./src/schemas/modifiers/prefault.js";
+} from "./schemas/spacial/spacial-schema.js";
+import { OptionalSchema } from "./schemas/modifiers/optional.js";
+import { NullableSchema } from "./schemas/modifiers/nullable.js";
+import { DefaultSchema } from "./schemas/modifiers/default.js";
+import { PrefaultSchema } from "./schemas/modifiers/prefault.js";
 import {
   CatchSchema,
   PreprocessSchema,
@@ -47,15 +47,15 @@ import {
   ReadonlySchema,
   BrandSchema,
   Codec,
-} from "./src/schemas/modifiers/all-modifiers.js";
-import { RefinementSchema } from "./src/schemas/modifiers/refine.js";
-import { SuperRefineSchema } from "./src/schemas/modifiers/extended-modifiers.js";
-import { TransformSchema } from "./src/schemas/modifiers/transform.js";
-import { coerce } from "./src/schemas/primitives/coercion.js";
-import { Schema, type RefinementContext } from "./src/core/schema.js";
+} from "./schemas/modifiers/all-modifiers.js";
+import { RefinementSchema } from "./schemas/modifiers/refine.js";
+import { SuperRefineSchema } from "./schemas/modifiers/extended-modifiers.js";
+import { TransformSchema } from "./schemas/modifiers/transform.js";
+import { coerce } from "./schemas/primitives/coercion.js";
+import { Schema, type RefinementContext } from "./core/schema.js";
 
-export type { Infer, Input, Output } from "./src/core/types.js";
-export { ValidationError, type FormattedError } from "./src/core/error.js";
+export type { Infer, Input, Output } from "./core/types.js";
+export { ValidationError, type FormattedError } from "./core/error.js";
 export type {
   ValidationIssue,
   InvalidTypeIssue,
@@ -67,19 +67,19 @@ export type {
   InvalidUnionIssue,
   CustomIssue,
   IssuePathElement,
-} from "./src/core/issue.js";
+} from "./core/issue.js";
 export type {
   ParseResult,
   SafeParseResult,
   SyncParseReturnType,
   AsyncParseReturnType,
   DynamicParseReturnType,
-} from "./src/core/result.js";
-export type { ParseContext, IssuePayload } from "./src/core/context.js";
+} from "./core/result.js";
+export type { ParseContext, IssuePayload } from "./core/context.js";
 export {
   type RefinementContext,
   type SchemaMetadata,
-} from "./src/core/schema.js";
+} from "./core/schema.js";
 
 // Export concrete schema classes for manual typing & inheritance
 export {
@@ -272,9 +272,9 @@ export const infer = {
   coerce,
 };
 // src/index.ts
-export { Schema } from "./src/core/schema.js";
+export { Schema } from "./core/schema.js";
 
 // Import registrations AFTER base Schema is fully exported
-import "./src/core/register.js";
+import "./core/register.js";
 export const z = infer; // Backward-compatible alias
 export default infer;
