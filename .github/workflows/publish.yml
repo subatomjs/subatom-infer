@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write # Required for npm provenance
+      id-token: write # Required for provenance and OIDC / Trusted Publishing
 
     steps:
       - name: Checkout repository
@@ -30,17 +30,17 @@ jobs:
           PACKAGE_NAME=$(node -p "require('./package.json').name")
           CURRENT_VERSION=$(node -p "require('./package.json').version")
           
-          # Fetch published version from npm registry
-          PUBLISHED_VERSION=$(npm view $PACKAGE_NAME version 2>/dev/null || echo "none")
+          # Check if this specific version already exists on npm
+          VERSION_EXISTS=$(npm view "${PACKAGE_NAME}@${CURRENT_VERSION}" version 2>/dev/null || echo "")
           
           echo "Current version in repo: $CURRENT_VERSION"
-          echo "Latest version on npm:   $PUBLISHED_VERSION"
           
-          if [ "$CURRENT_VERSION" != "$PUBLISHED_VERSION" ]; then
+          if [ -z "$VERSION_EXISTS" ]; then
             echo "is_new_version=true" >> "$GITHUB_OUTPUT"
+            echo "Version $CURRENT_VERSION is new. Proceeding with publish."
           else
             echo "is_new_version=false" >> "$GITHUB_OUTPUT"
-            echo "Version has not changed. Skipping publish."
+            echo "Version $CURRENT_VERSION already exists on npm. Skipping publish."
           fi
 
       - name: Install dependencies
@@ -51,7 +51,6 @@ jobs:
         if: steps.check_version.outputs.is_new_version == 'true'
         run: npm run lint
 
-      # Triggers prepublishOnly (typecheck -> build -> test) and publishes
       - name: Publish to npm
         if: steps.check_version.outputs.is_new_version == 'true'
         run: npm publish --provenance --access public
