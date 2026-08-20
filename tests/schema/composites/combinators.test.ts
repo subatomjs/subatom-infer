@@ -6,17 +6,18 @@ import {
   LazySchema,
 } from "../../../src/schemas/composites/combinators.js";
 import { ObjectSchema, type RawShape } from "../../../src/schemas/composites/object.js";
-import { Schema } from "../../../src/core/schema-base.js";
+import { Schema } from "../../../src/core/schema.js";
 import { addIssue, type ParseContext } from "../../../src/core/context.js";
 import {
   makeSuccess,
+  makeFailure,
   isPromise,
   type DynamicParseReturnType,
-  type AsyncParseReturnType,
+  type ParseResult,
 } from "../../../src/core/result.js";
 import { ValidationError } from "../../../src/core/error.js";
 
-// --- Mock Concrete Schemas for Exact Testing ---
+// --- Mock Concrete Schemas for Exact Branch Testing ---
 
 class SyncStringSchema extends Schema<string> {
   _parse(input: unknown, ctx: ParseContext): DynamicParseReturnType<string> {
@@ -29,7 +30,7 @@ class SyncStringSchema extends Schema<string> {
       expected: "string",
       received: typeof input,
     });
-    return { success: false, issues: ctx.issues };
+    return makeFailure(ctx.issues);
   }
 }
 
@@ -44,12 +45,12 @@ class SyncNumberSchema extends Schema<number> {
       expected: "number",
       received: typeof input,
     });
-    return { success: false, issues: ctx.issues };
+    return makeFailure(ctx.issues);
   }
 }
 
 class AsyncStringSchema extends Schema<string> {
-  async _parse(input: unknown, ctx: ParseContext): AsyncParseReturnType<string> {
+  async _parse(input: unknown, ctx: ParseContext): Promise<ParseResult<string>> {
     await new Promise((resolve) => setTimeout(resolve, 2));
     if (typeof input === "string") {
       return makeSuccess(input.toUpperCase());
@@ -60,12 +61,12 @@ class AsyncStringSchema extends Schema<string> {
       expected: "string",
       received: typeof input,
     });
-    return { success: false, issues: ctx.issues };
+    return makeFailure(ctx.issues);
   }
 }
 
 class AsyncNumberSchema extends Schema<number> {
-  async _parse(input: unknown, ctx: ParseContext): AsyncParseReturnType<number> {
+  async _parse(input: unknown, ctx: ParseContext): Promise<ParseResult<number>> {
     await new Promise((resolve) => setTimeout(resolve, 2));
     if (typeof input === "number") {
       return makeSuccess(input * 2);
@@ -76,7 +77,7 @@ class AsyncNumberSchema extends Schema<number> {
       expected: "number",
       received: typeof input,
     });
-    return { success: false, issues: ctx.issues };
+    return makeFailure(ctx.issues);
   }
 }
 
@@ -97,7 +98,7 @@ class MockLiteralSchema<T extends string | number | boolean> extends Schema<T> {
       received: input,
       message: `Expected literal ${String(this.value)}`,
     });
-    return { success: false, issues: ctx.issues };
+    return makeFailure(ctx.issues);
   }
 }
 
@@ -151,7 +152,7 @@ describe("Combinators Schemas (combinators.ts)", () => {
         expect(safe.success).toBe(false);
         if (!safe.success) {
           expect(safe.error).toBeInstanceOf(ValidationError);
-          const issue = safe.error.issues[0];
+          const issue = safe.issues[0];
           expect(issue?.code).toBe("invalid_union");
           if (issue?.code === "invalid_union") {
             expect(issue.message).toBe("Input did not match any union branch");
@@ -163,7 +164,9 @@ describe("Combinators Schemas (combinators.ts)", () => {
       });
 
       it("catches and transforms thrown 'Synchronous parse' error during sync parse", () => {
-        const throwingSchema = new ThrowingSchema(new Error("Synchronous parse encountered nested async"));
+        const throwingSchema = new ThrowingSchema(
+          new Error("Synchronous parse encountered nested async")
+        );
         const schemaWithThrow = new UnionSchema([throwingSchema, syncNumber]);
 
         expect(() => schemaWithThrow.parse(42)).toThrowError(
@@ -172,10 +175,14 @@ describe("Combinators Schemas (combinators.ts)", () => {
       });
 
       it("re-throws unexpected general Error instances from branch options", () => {
-        const genericErrorSchema = new ThrowingSchema(new Error("Database connection lost"));
+        const genericErrorSchema = new ThrowingSchema(
+          new Error("Database connection lost")
+        );
         const schemaWithThrow = new UnionSchema([genericErrorSchema, syncNumber]);
 
-        expect(() => schemaWithThrow.parse(42)).toThrowError("Database connection lost");
+        expect(() => schemaWithThrow.parse(42)).toThrowError(
+          "Database connection lost"
+        );
       });
 
       it("re-throws non-Error thrown objects during synchronous branch execution", () => {
@@ -219,7 +226,7 @@ describe("Combinators Schemas (combinators.ts)", () => {
         expect(safe.success).toBe(false);
         if (!safe.success) {
           expect(safe.error).toBeInstanceOf(ValidationError);
-          const issue = safe.error.issues[0];
+          const issue = safe.issues[0];
           expect(issue?.code).toBe("invalid_union");
           if (issue?.code === "invalid_union") {
             expect(issue.message).toBe("Input did not match any union branch");
@@ -247,14 +254,18 @@ describe("Combinators Schemas (combinators.ts)", () => {
     const options = [circleSchema, squareSchema] as const;
 
     describe("Constructor & Structure Validation", () => {
-      it("throws if a member schema does not contain the discriminator literal in its shape", () => {
+      it("throws if a member schema does not contain the discriminator in its shape", () => {
         const invalidMember = new ObjectSchema({
           radius: syncNumber,
         });
 
         expect(() => {
-          new DiscriminatedUnionSchema("type", [invalidMember as unknown as ObjectSchema<RawShape>]);
-        }).toThrowError('Every discriminated union member must specify literal on "type"');
+          new DiscriminatedUnionSchema("type", [
+            invalidMember as unknown as ObjectSchema<RawShape>,
+          ]);
+        }).toThrowError(
+          'Every discriminated union member must specify a LiteralSchema on "type"'
+        );
       });
 
       it("throws if a member schema discriminator field is not a literal schema with 'value'", () => {
@@ -263,13 +274,20 @@ describe("Combinators Schemas (combinators.ts)", () => {
         });
 
         expect(() => {
-          new DiscriminatedUnionSchema("type", [nonLiteralMember as unknown as ObjectSchema<RawShape>]);
-        }).toThrowError('Every discriminated union member must specify literal on "type"');
+          new DiscriminatedUnionSchema("type", [
+            nonLiteralMember as unknown as ObjectSchema<RawShape>,
+          ]);
+        }).toThrowError(
+          'Every discriminated union member must specify a LiteralSchema on "type"'
+        );
       });
     });
 
     describe("Parsing & Branch Routing", () => {
-      const discUnion = new DiscriminatedUnionSchema("type", options as unknown as ObjectSchema<RawShape>[]);
+      const discUnion = new DiscriminatedUnionSchema(
+        "type",
+        options as unknown as ObjectSchema<RawShape>[]
+      );
 
       it("fails when input is not an object or is null", () => {
         const nonObjects: unknown[] = [null, "string", 123, true, undefined];
@@ -278,7 +296,7 @@ describe("Combinators Schemas (combinators.ts)", () => {
           const safe = discUnion.safeParse(input);
           expect(safe.success).toBe(false);
           if (!safe.success) {
-            const issue = safe.error.issues[0];
+            const issue = safe.issues[0];
             expect(issue?.code).toBe("invalid_type");
             if (issue?.code === "invalid_type") {
               expect(issue.expected).toBe("object");
@@ -292,11 +310,13 @@ describe("Combinators Schemas (combinators.ts)", () => {
         const safe = discUnion.safeParse({ type: "triangle", side: 10 });
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          const issue = safe.error.issues[0];
+          const issue = safe.issues[0];
           expect(issue?.code).toBe("invalid_value");
           if (issue?.code === "invalid_value") {
             expect(issue.received).toBe("triangle");
-            expect(issue.message).toBe('No matching branch for discriminator type="triangle"');
+            expect(issue.message).toBe(
+              'No matching branch for discriminator type="triangle"'
+            );
           }
         }
       });
@@ -313,10 +333,13 @@ describe("Combinators Schemas (combinators.ts)", () => {
       });
 
       it("propagates internal branch validation errors when properties within matched branch fail", () => {
-        const safe = discUnion.safeParse({ type: "circle", radius: "not_a_number" });
+        const safe = discUnion.safeParse({
+          type: "circle",
+          radius: "not_a_number",
+        });
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          expect(safe.error.issues[0]?.path).toEqual(["radius"]);
+          expect(safe.issues[0]?.path).toEqual(["radius"]);
         }
       });
 
@@ -331,7 +354,10 @@ describe("Combinators Schemas (combinators.ts)", () => {
           squareSchema,
         ] as unknown as ObjectSchema<RawShape>[]);
 
-        const res = await asyncDiscUnion.parseAsync({ type: "circle", radius: 15 });
+        const res = await asyncDiscUnion.parseAsync({
+          type: "circle",
+          radius: 15,
+        });
         expect(res).toEqual({ type: "circle", radius: 30 });
       });
     });
@@ -374,7 +400,9 @@ describe("Combinators Schemas (combinators.ts)", () => {
       });
 
       it("catches and transforms thrown 'Synchronous parse' error from left branch", () => {
-        const throwingLeft = new ThrowingSchema(new Error("Synchronous parse encountered async inside left"));
+        const throwingLeft = new ThrowingSchema(
+          new Error("Synchronous parse encountered async inside left")
+        );
         const intersection = new IntersectionSchema(throwingLeft, rightObj);
 
         expect(() => intersection.parse({ a: "test", b: 123 })).toThrowError(
@@ -383,7 +411,9 @@ describe("Combinators Schemas (combinators.ts)", () => {
       });
 
       it("catches and transforms thrown 'Synchronous parse' error from right branch", () => {
-        const throwingRight = new ThrowingSchema(new Error("Synchronous parse encountered async inside right"));
+        const throwingRight = new ThrowingSchema(
+          new Error("Synchronous parse encountered async inside right")
+        );
         const intersection = new IntersectionSchema(leftObj, throwingRight);
 
         expect(() => intersection.parse({ a: "test", b: 123 })).toThrowError(
@@ -395,14 +425,18 @@ describe("Combinators Schemas (combinators.ts)", () => {
         const throwingLeft = new ThrowingSchema(new Error("Left fatal error"));
         const intersection = new IntersectionSchema(throwingLeft, rightObj);
 
-        expect(() => intersection.parse({ a: "test", b: 123 })).toThrowError("Left fatal error");
+        expect(() => intersection.parse({ a: "test", b: 123 })).toThrowError(
+          "Left fatal error"
+        );
       });
 
       it("re-throws unexpected general error when right branch throws during sync parse", () => {
         const throwingRight = new ThrowingSchema(new Error("Right fatal error"));
         const intersection = new IntersectionSchema(leftObj, throwingRight);
 
-        expect(() => intersection.parse({ a: "test", b: 123 })).toThrowError("Right fatal error");
+        expect(() => intersection.parse({ a: "test", b: 123 })).toThrowError(
+          "Right fatal error"
+        );
       });
 
       it("re-throws non-Error thrown objects from left branch during sync parse", () => {
@@ -451,7 +485,7 @@ describe("Combinators Schemas (combinators.ts)", () => {
         const safe = await intersection.safeParseAsync({ a: 123, b: 20 });
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          expect(safe.error.issues[0]?.path).toEqual(["a"]);
+          expect(safe.issues[0]?.path).toEqual(["a"]);
         }
       });
 
@@ -463,7 +497,7 @@ describe("Combinators Schemas (combinators.ts)", () => {
         const safe = await intersection.safeParseAsync({ a: "valid", b: "invalid" });
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          expect(safe.error.issues[0]?.path).toEqual(["b"]);
+          expect(safe.issues[0]?.path).toEqual(["b"]);
         }
       });
 
@@ -475,7 +509,7 @@ describe("Combinators Schemas (combinators.ts)", () => {
         const safe = await intersection.safeParseAsync({ a: 123, b: "invalid" });
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          expect(safe.error.issues).toHaveLength(2);
+          expect(safe.issues).toHaveLength(2);
         }
       });
     });
@@ -490,8 +524,13 @@ describe("Combinators Schemas (combinators.ts)", () => {
         class NullMockSchema extends Schema<null> {
           _parse(input: unknown, ctx: ParseContext): DynamicParseReturnType<null> {
             if (input === null) return makeSuccess(null);
-            addIssue(ctx, { code: "invalid_type", expected: "null", received: typeof input, message: "Expected null" });
-            return { success: false, issues: ctx.issues };
+            addIssue(ctx, {
+              code: "invalid_type",
+              expected: "null",
+              received: typeof input,
+              message: "Expected null",
+            });
+            return makeFailure(ctx.issues);
           }
         }
         const nullSchema = new NullMockSchema();
@@ -516,20 +555,28 @@ describe("Combinators Schemas (combinators.ts)", () => {
         new ObjectSchema({
           name: syncString,
           children: new (class extends Schema<TreeNode[] | undefined> {
-            _parse(input: unknown, ctx: ParseContext): DynamicParseReturnType<TreeNode[] | undefined> {
+            _parse(
+              input: unknown,
+              ctx: ParseContext
+            ): DynamicParseReturnType<TreeNode[] | undefined> {
               if (input === undefined) return makeSuccess(undefined);
               if (Array.isArray(input)) {
                 const results: TreeNode[] = [];
                 for (const item of input) {
                   const res = treeSchema._parse(item, ctx);
                   if (isPromise(res)) throw new Error("Unexpected async");
-                  if (!res.success) return { success: false, issues: ctx.issues };
+                  if (!res.success) return makeFailure(ctx.issues);
                   results.push(res.data);
                 }
                 return makeSuccess(results);
               }
-              addIssue(ctx, { code: "invalid_type", expected: "array", received: typeof input, message: "Expected array" });
-              return { success: false, issues: ctx.issues };
+              addIssue(ctx, {
+                code: "invalid_type",
+                expected: "array",
+                received: typeof input,
+                message: "Expected array",
+              });
+              return makeFailure(ctx.issues);
             }
           })(),
         })

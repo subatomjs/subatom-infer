@@ -10,11 +10,12 @@ import {
   NeverSchema,
   SymbolSchema,
   NaNSchema,
+  BigIntSchema,
   type LiteralValue,
 } from "../../../src/schemas/primitives/advanced-primitives.js";
 import { ValidationError } from "../../../src/core/error.js";
 
-describe("Primitives Schemas", () => {
+describe("Advanced Primitives Module (advanced-primitives.ts)", () => {
   // ==========================================
   // BooleanSchema
   // ==========================================
@@ -39,7 +40,7 @@ describe("Primitives Schemas", () => {
         expect(safe.success).toBe(false);
         if (!safe.success) {
           expect(safe.error).toBeInstanceOf(ValidationError);
-          const issue = safe.error.issues[0];
+          const issue = safe.issues[0];
           expect(issue?.code).toBe("invalid_type");
           if (issue?.code === "invalid_type") {
             expect(issue.expected).toBe("boolean");
@@ -63,11 +64,12 @@ describe("Primitives Schemas", () => {
     });
 
     it("parses valid Date instances and returns a fresh copy", () => {
-      const now = new Date("2026-08-19T12:00:00.000Z");
+      const now = new Date("2026-08-20T12:00:00.000Z");
       const parsed = schema.parse(now);
 
       expect(parsed).toEqual(now);
-      expect(parsed).not.toBe(now); // Verifies new Date instance immutability
+      expect(parsed).not.toBe(now);
+      expect(parsed.getTime()).toBe(now.getTime());
     });
 
     it("fails when input is an Invalid Date instance", () => {
@@ -77,7 +79,7 @@ describe("Primitives Schemas", () => {
       expect(safe.success).toBe(false);
       if (!safe.success) {
         expect(safe.error).toBeInstanceOf(ValidationError);
-        const issue = safe.error.issues[0];
+        const issue = safe.issues[0];
         expect(issue?.code).toBe("invalid_type");
         if (issue?.code === "invalid_type") {
           expect(issue.expected).toBe("Date");
@@ -88,13 +90,13 @@ describe("Primitives Schemas", () => {
     });
 
     it("fails when input is not a Date instance", () => {
-      const nonDates: unknown[] = ["2026-08-19", 1776518400000, null, undefined, {}, []];
+      const nonDates: unknown[] = ["2026-08-20", 1776518400000, null, undefined, {}, []];
 
       for (const input of nonDates) {
         const safe = schema.safeParse(input);
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          const issue = safe.error.issues[0];
+          const issue = safe.issues[0];
           expect(issue?.code).toBe("invalid_type");
           if (issue?.code === "invalid_type") {
             expect(issue.expected).toBe("Date");
@@ -118,8 +120,9 @@ describe("Primitives Schemas", () => {
         const safe = minSchema.safeParse(new Date("2025-12-31T23:59:59.999Z"));
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          expect(safe.error.issues[0]?.message).toBe(
-            `Date must be greater than or equal to ${minDate.toISOString()}`
+          expect(safe.issues[0]?.code).toBe("too_small");
+          expect(safe.issues[0]?.message).toBe(
+            `Date must be >= ${minDate.toISOString()}`
           );
         }
       });
@@ -130,7 +133,7 @@ describe("Primitives Schemas", () => {
 
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          expect(safe.error.issues[0]?.message).toBe("Date too early!");
+          expect(safe.issues[0]?.message).toBe("Date too early!");
         }
       });
     });
@@ -149,8 +152,9 @@ describe("Primitives Schemas", () => {
         const safe = maxSchema.safeParse(new Date("2027-01-01T00:00:00.000Z"));
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          expect(safe.error.issues[0]?.message).toBe(
-            `Date must be less than or equal to ${maxDate.toISOString()}`
+          expect(safe.issues[0]?.code).toBe("too_big");
+          expect(safe.issues[0]?.message).toBe(
+            `Date must be <= ${maxDate.toISOString()}`
           );
         }
       });
@@ -161,7 +165,7 @@ describe("Primitives Schemas", () => {
 
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          expect(safe.error.issues[0]?.message).toBe("Date too late!");
+          expect(safe.issues[0]?.message).toBe("Date too late!");
         }
       });
     });
@@ -193,7 +197,7 @@ describe("Primitives Schemas", () => {
       expect(safe.success).toBe(false);
       if (!safe.success) {
         expect(safe.error).toBeInstanceOf(ValidationError);
-        const issue = safe.error.issues[0];
+        const issue = safe.issues[0];
         expect(issue?.code).toBe("invalid_value");
         if (issue?.code === "invalid_value") {
           expect(issue.expected).toBe("SUCCESS");
@@ -210,6 +214,11 @@ describe("Primitives Schemas", () => {
   describe("NullSchema", () => {
     const schema = new NullSchema();
 
+    it("verifies static TypeScript output and input types", () => {
+      expectTypeOf(schema._output).toEqualTypeOf<null>();
+      expectTypeOf(schema._input).toEqualTypeOf<null>();
+    });
+
     it("parses null successfully", () => {
       expect(schema.parse(null)).toBeNull();
     });
@@ -221,7 +230,7 @@ describe("Primitives Schemas", () => {
         const safe = schema.safeParse(input);
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          const issue = safe.error.issues[0];
+          const issue = safe.issues[0];
           expect(issue?.code).toBe("invalid_type");
           if (issue?.code === "invalid_type") {
             expect(issue.expected).toBe("null");
@@ -239,6 +248,11 @@ describe("Primitives Schemas", () => {
   describe("UndefinedSchema", () => {
     const schema = new UndefinedSchema();
 
+    it("verifies static TypeScript output and input types", () => {
+      expectTypeOf(schema._output).toEqualTypeOf<undefined>();
+      expectTypeOf(schema._input).toEqualTypeOf<undefined>();
+    });
+
     it("parses undefined successfully", () => {
       expect(schema.parse(undefined)).toBeUndefined();
     });
@@ -250,7 +264,7 @@ describe("Primitives Schemas", () => {
         const safe = schema.safeParse(input);
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          const issue = safe.error.issues[0];
+          const issue = safe.issues[0];
           expect(issue?.code).toBe("invalid_type");
           if (issue?.code === "invalid_type") {
             expect(issue.expected).toBe("undefined");
@@ -289,6 +303,11 @@ describe("Primitives Schemas", () => {
   describe("NeverSchema", () => {
     const schema = new NeverSchema();
 
+    it("verifies static TypeScript output and input types", () => {
+      expectTypeOf(schema._output).toEqualTypeOf<never>();
+      expectTypeOf(schema._input).toEqualTypeOf<never>();
+    });
+
     it("fails for every input type", () => {
       const inputs: unknown[] = ["anything", 123, null, undefined, true, {}];
 
@@ -296,7 +315,7 @@ describe("Primitives Schemas", () => {
         const safe = schema.safeParse(input);
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          const issue = safe.error.issues[0];
+          const issue = safe.issues[0];
           expect(issue?.code).toBe("invalid_type");
           if (issue?.code === "invalid_type") {
             expect(issue.expected).toBe("never");
@@ -314,6 +333,11 @@ describe("Primitives Schemas", () => {
   describe("SymbolSchema", () => {
     const schema = new SymbolSchema();
 
+    it("verifies static TypeScript output and input types", () => {
+      expectTypeOf(schema._output).toEqualTypeOf<symbol>();
+      expectTypeOf(schema._input).toEqualTypeOf<symbol>();
+    });
+
     it("parses valid symbols successfully", () => {
       const sym = Symbol("custom");
       expect(schema.parse(sym)).toBe(sym);
@@ -327,7 +351,7 @@ describe("Primitives Schemas", () => {
         const safe = schema.safeParse(input);
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          const issue = safe.error.issues[0];
+          const issue = safe.issues[0];
           expect(issue?.code).toBe("invalid_type");
           if (issue?.code === "invalid_type") {
             expect(issue.expected).toBe("symbol");
@@ -345,6 +369,11 @@ describe("Primitives Schemas", () => {
   describe("NaNSchema", () => {
     const schema = new NaNSchema();
 
+    it("verifies static TypeScript output and input types", () => {
+      expectTypeOf(schema._output).toEqualTypeOf<number>();
+      expectTypeOf(schema._input).toEqualTypeOf<number>();
+    });
+
     it("parses NaN successfully and returns Number.NaN", () => {
       const result = schema.parse(Number.NaN);
       expect(Number.isNaN(result)).toBe(true);
@@ -355,7 +384,7 @@ describe("Primitives Schemas", () => {
       expect(safe.success).toBe(false);
       if (!safe.success) {
         expect(safe.error).toBeInstanceOf(ValidationError);
-        const issue = safe.error.issues[0];
+        const issue = safe.issues[0];
         expect(issue?.code).toBe("invalid_type");
         if (issue?.code === "invalid_type") {
           expect(issue.expected).toBe("NaN");
@@ -372,7 +401,7 @@ describe("Primitives Schemas", () => {
         const safe = schema.safeParse(input);
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          const issue = safe.error.issues[0];
+          const issue = safe.issues[0];
           expect(issue?.code).toBe("invalid_type");
           if (issue?.code === "invalid_type") {
             expect(issue.expected).toBe("NaN");
@@ -380,6 +409,17 @@ describe("Primitives Schemas", () => {
           }
         }
       }
+    });
+  });
+
+  // ==========================================
+  // BigIntSchema Re-export
+  // ==========================================
+  describe("BigIntSchema Re-export", () => {
+    it("exports BigIntSchema constructor", () => {
+      expect(BigIntSchema).toBeDefined();
+      const instance = new BigIntSchema();
+      expect(instance).toBeInstanceOf(BigIntSchema);
     });
   });
 });

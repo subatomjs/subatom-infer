@@ -1,5 +1,4 @@
-import { type RefinementContext } from "../../core/schema.js";
-import { Schema } from "../../core/schema-base.js";
+import { Schema, type RefinementContext } from "../../core/schema.js";
 import { addIssue, type ParseContext } from "../../core/context.js";
 import { makeFailure, makeSuccess, isPromise, type DynamicParseReturnType } from "../../core/result.js";
 
@@ -15,18 +14,24 @@ export class SuperRefineSchema<TOutput, TInput> extends Schema<TOutput, TInput> 
     const innerResult = this.innerSchema._parse(input, ctx);
 
     const applySuperRefine = (data: TOutput): DynamicParseReturnType<TOutput> => {
+      const baseIssueCount = ctx.issues.length;
       const refCtx: RefinementContext = {
         addIssue: (issue) => addIssue(ctx, issue),
         path: ctx.path,
       };
+
       const res = this.refinement(data, refCtx);
 
       if (isPromise(res)) {
-        if (!ctx.async) throw new Error("Asynchronous superRefine executed during synchronous parse mode.");
-        return res.then(() => (ctx.issues.length > 0 ? makeFailure(ctx.issues) : makeSuccess(data)));
+        if (!ctx.async) {
+          throw new Error("Asynchronous superRefine executed during synchronous parse mode.");
+        }
+        return res.then(() =>
+          ctx.issues.length > baseIssueCount ? makeFailure(ctx.issues) : makeSuccess(data)
+        );
       }
 
-      if (ctx.issues.length > 0) return makeFailure(ctx.issues);
+      if (ctx.issues.length > baseIssueCount) return makeFailure(ctx.issues);
       return makeSuccess(data);
     };
 
@@ -37,7 +42,3 @@ export class SuperRefineSchema<TOutput, TInput> extends Schema<TOutput, TInput> 
     return applySuperRefine(innerResult.data);
   }
 }
-
-export { RefinementSchema } from "./refine.js";
-export { TransformSchema } from "./transform.js";
-export { CatchSchema, PreprocessSchema, PipeSchema, ReadonlySchema, BrandSchema, Codec } from "./all-modifiers.js";

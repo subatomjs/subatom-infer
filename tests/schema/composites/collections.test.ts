@@ -1,97 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
-
-// Mock modifier & combinator classes with executable parse pipelines
-vi.mock("../../../src/schemas/modifiers/optional.js", () => ({
-  OptionalSchema: class MockOptionalSchema {
-    constructor(public inner: unknown) {}
-  },
-}));
-
-vi.mock("../../../src/schemas/modifiers/nullable.js", () => ({
-  NullableSchema: class MockNullableSchema {
-    constructor(public inner: unknown) {}
-  },
-}));
-
-vi.mock("../../../src/schemas/modifiers/default.js", () => ({
-  DefaultSchema: class MockDefaultSchema {
-    constructor(
-      public inner: unknown,
-      public defaultValue: unknown,
-    ) {}
-  },
-}));
-
-vi.mock("../../../src/schemas/modifiers/prefault.js", () => ({
-  PrefaultSchema: class MockPrefaultSchema {
-    constructor(
-      public inner: unknown,
-      public defaultValue: unknown,
-    ) {}
-  },
-}));
-
-vi.mock("../../../src/schemas/modifiers/extended-modifiers.js", () => {
-  return {
-    CatchSchema: class MockCatchSchema {
-      constructor(
-        public inner: unknown,
-        public catchValue: unknown,
-      ) {}
-    },
-    PipeSchema: class MockPipeSchema {
-      constructor(
-        public inner: unknown,
-        public nextSchema: unknown,
-      ) {}
-    },
-    TransformSchema: class MockTransformSchema {
-      constructor(
-        public inner: unknown,
-        public transformer: unknown,
-      ) {}
-    },
-    RefinementSchema: class MockRefinementSchema {
-      constructor(
-        public inner: any,
-        public predicate: (val: any) => boolean | Promise<boolean>,
-        public message: string | ((val: any) => string),
-      ) {}
-
-      parse(input: unknown) {
-        const parsed = this.inner.parse(input);
-        const valid = this.predicate(parsed);
-        if (!valid) {
-          const msg =
-            typeof this.message === "function"
-              ? this.message(parsed)
-              : this.message;
-          throw new Error(msg);
-        }
-        return parsed;
-      }
-    },
-    SuperRefineSchema: class MockSuperRefineSchema {
-      constructor(
-        public inner: unknown,
-        public refinement: unknown,
-      ) {}
-    },
-  };
-});
-
-vi.mock("../../../src/schemas/composites/combinators.js", () => ({
-  UnionSchema: class MockUnionSchema {
-    constructor(public options: unknown[]) {}
-  },
-  IntersectionSchema: class MockIntersectionSchema {
-    constructor(
-      public left: unknown,
-      public right: unknown,
-    ) {}
-  },
-}));
-
+import { describe, it, expect } from "vitest";
 import {
   ArraySchema,
   TupleSchema,
@@ -99,16 +6,18 @@ import {
   SetSchema,
   MapSchema,
 } from "../../../src/schemas/composites/collections.js";
+import { OptionalSchema } from "../../../src/schemas/modifiers/optional.js";
 import { Schema } from "../../../src/core/schema.js";
 import { addIssue, type ParseContext } from "../../../src/core/context.js";
 import {
   makeSuccess,
+  makeFailure,
   type DynamicParseReturnType,
-  type AsyncParseReturnType,
+  type ParseResult,
 } from "../../../src/core/result.js";
 import { ValidationError } from "../../../src/core/error.js";
 
-// --- Test Harness Helper Schemas (Does NOT freeze shared ctx.issues buffer) ---
+// --- Test Harness Schemas ---
 class SyncStringSchema extends Schema<string> {
   _parse(input: unknown, ctx: ParseContext): DynamicParseReturnType<string> {
     if (typeof input === "string") {
@@ -120,7 +29,7 @@ class SyncStringSchema extends Schema<string> {
       expected: "string",
       received: typeof input,
     });
-    return { success: false, issues: ctx.issues };
+    return makeFailure(ctx.issues);
   }
 }
 
@@ -135,15 +44,15 @@ class SyncNumberSchema extends Schema<number> {
       expected: "number",
       received: typeof input,
     });
-    return { success: false, issues: ctx.issues };
+    return makeFailure(ctx.issues);
   }
 }
 
 class AsyncStringSchema extends Schema<string> {
   async _parse(
     input: unknown,
-    ctx: ParseContext,
-  ): AsyncParseReturnType<string> {
+    ctx: ParseContext
+  ): Promise<ParseResult<string>> {
     await new Promise((res) => setTimeout(res, 2));
     if (typeof input === "string") {
       return makeSuccess(input.toUpperCase());
@@ -154,15 +63,15 @@ class AsyncStringSchema extends Schema<string> {
       expected: "string",
       received: typeof input,
     });
-    return { success: false, issues: ctx.issues };
+    return makeFailure(ctx.issues);
   }
 }
 
 class AsyncNumberSchema extends Schema<number> {
   async _parse(
     input: unknown,
-    ctx: ParseContext,
-  ): AsyncParseReturnType<number> {
+    ctx: ParseContext
+  ): Promise<ParseResult<number>> {
     await new Promise((res) => setTimeout(res, 2));
     if (typeof input === "number") {
       return makeSuccess(input * 2);
@@ -173,7 +82,7 @@ class AsyncNumberSchema extends Schema<number> {
       expected: "number",
       received: typeof input,
     });
-    return { success: false, issues: ctx.issues };
+    return makeFailure(ctx.issues);
   }
 }
 
@@ -191,16 +100,16 @@ describe("Collection Schemas", () => {
     });
 
     it("fails when input is not an array", () => {
-      expect(() => stringArray.parse("not an array")).toThrowError(
-        ValidationError,
-      );
+      expect(() => stringArray.parse("not an array")).toThrowError(ValidationError);
+
       const safe = stringArray.safeParse(123);
       expect(safe.success).toBe(false);
       if (!safe.success) {
-        const issue = safe.error.issues[0];
+        const issue = safe.issues[0];
         expect(issue?.code).toBe("invalid_type");
         if (issue?.code === "invalid_type") {
           expect(issue.expected).toBe("array");
+          expect(issue.received).toBe("number");
         }
       }
     });
@@ -209,9 +118,9 @@ describe("Collection Schemas", () => {
       const safe = stringArray.safeParse(["valid", 123, "also valid", true]);
       expect(safe.success).toBe(false);
       if (!safe.success) {
-        expect(safe.error.issues).toHaveLength(2);
-        expect(safe.error.issues[0]?.path).toEqual([1]);
-        expect(safe.error.issues[1]?.path).toEqual([3]);
+        expect(safe.issues).toHaveLength(2);
+        expect(safe.issues[0]?.path).toEqual([1]);
+        expect(safe.issues[1]?.path).toEqual([3]);
       }
     });
 
@@ -224,23 +133,29 @@ describe("Collection Schemas", () => {
       const safe = await asyncStringArray.safeParseAsync(["apple", 999]);
       expect(safe.success).toBe(false);
       if (!safe.success) {
-        expect(safe.error.issues[0]?.path).toEqual([1]);
+        expect(safe.issues[0]?.path).toEqual([1]);
       }
     });
 
     it("throws when async elements are encountered in sync parse()", () => {
       expect(() => asyncStringArray.parse(["apple"])).toThrowError(
-        "Synchronous parse encountered asynchronous item parsing.",
+        "Synchronous parse encountered asynchronous item parsing."
       );
     });
 
-    describe("Array refinement helpers", () => {
+    describe("Array refinement helpers and bounds", () => {
       it(".min() checks minimum array length with default and custom messages", () => {
         const minDefault = stringArray.min(2);
         expect(minDefault.parse(["a", "b"])).toEqual(["a", "b"]);
-        expect(() => minDefault.parse(["a"])).toThrowError(
-          "Array must contain at least 2 element(s)",
-        );
+
+        const safeFailDefault = minDefault.safeParse(["a"]);
+        expect(safeFailDefault.success).toBe(false);
+        if (!safeFailDefault.success) {
+          expect(safeFailDefault.issues[0]?.code).toBe("too_small");
+          expect(safeFailDefault.issues[0]?.message).toBe(
+            "Array must contain at least 2 element(s)"
+          );
+        }
 
         const minCustom = stringArray.min(2, "Need at least 2");
         expect(() => minCustom.parse(["a"])).toThrowError("Need at least 2");
@@ -249,40 +164,61 @@ describe("Collection Schemas", () => {
       it(".max() checks maximum array length with default and custom messages", () => {
         const maxDefault = stringArray.max(2);
         expect(maxDefault.parse(["a", "b"])).toEqual(["a", "b"]);
-        expect(() => maxDefault.parse(["a", "b", "c"])).toThrowError(
-          "Array must contain at most 2 element(s)",
-        );
+
+        const safeFailDefault = maxDefault.safeParse(["a", "b", "c"]);
+        expect(safeFailDefault.success).toBe(false);
+        if (!safeFailDefault.success) {
+          expect(safeFailDefault.issues[0]?.code).toBe("too_big");
+          expect(safeFailDefault.issues[0]?.message).toBe(
+            "Array must contain at most 2 element(s)"
+          );
+        }
 
         const maxCustom = stringArray.max(1, "Too many items");
-        expect(() => maxCustom.parse(["a", "b"])).toThrowError(
-          "Too many items",
-        );
+        expect(() => maxCustom.parse(["a", "b"])).toThrowError("Too many items");
       });
 
       it(".length() checks exact array length with default and custom messages", () => {
         const lenDefault = stringArray.length(2);
         expect(lenDefault.parse(["a", "b"])).toEqual(["a", "b"]);
-        expect(() => lenDefault.parse(["a"])).toThrowError(
-          "Array must contain exactly 2 element(s)",
-        );
+
+        const safeFail = lenDefault.safeParse(["a"]);
+        expect(safeFail.success).toBe(false);
+        if (!safeFail.success) {
+          expect(safeFail.issues[0]?.code).toBe("invalid_value");
+          expect(safeFail.issues[0]?.message).toBe(
+            "Array must contain exactly 2 element(s)"
+          );
+        }
 
         const lenCustom = stringArray.length(2, "Must be exactly 2");
         expect(() => lenCustom.parse(["a", "b", "c"])).toThrowError(
-          "Must be exactly 2",
+          "Must be exactly 2"
         );
       });
 
       it(".nonempty() validates non-empty arrays with default and custom messages", () => {
         const nonEmptyDefault = stringArray.nonempty();
         expect(nonEmptyDefault.parse(["a"])).toEqual(["a"]);
-        expect(() => nonEmptyDefault.parse([])).toThrowError(
-          "Array cannot be empty",
-        );
+
+        const safeFail = nonEmptyDefault.safeParse([]);
+        expect(safeFail.success).toBe(false);
+        if (!safeFail.success) {
+          expect(safeFail.issues[0]?.code).toBe("too_small");
+          expect(safeFail.issues[0]?.message).toBe("Array cannot be empty");
+        }
 
         const nonEmptyCustom = stringArray.nonempty("Array must not be empty!");
-        expect(() => nonEmptyCustom.parse([])).toThrowError(
-          "Array must not be empty!",
-        );
+        expect(() => nonEmptyCustom.parse([])).toThrowError("Array must not be empty!");
+      });
+
+      it("handles async checks validation failure after resolving all elements", async () => {
+        const asyncBoundedArray = asyncStringArray.min(3);
+        const safe = await asyncBoundedArray.safeParseAsync(["a", "b"]);
+        expect(safe.success).toBe(false);
+        if (!safe.success) {
+          expect(safe.issues[0]?.code).toBe("too_small");
+        }
       });
     });
   });
@@ -301,6 +237,11 @@ describe("Collection Schemas", () => {
       new AsyncNumberSchema(),
     ] as const);
 
+    const optionalTuple = new TupleSchema([
+      new SyncStringSchema(),
+      new OptionalSchema(new SyncNumberSchema()),
+    ] as const);
+
     it("parses valid tuple matching element types and length", () => {
       const res = syncTuple.parse(["hello", 42]);
       expect(res).toEqual(["hello", 42]);
@@ -310,33 +251,52 @@ describe("Collection Schemas", () => {
       const safe = syncTuple.safeParse("not a tuple");
       expect(safe.success).toBe(false);
       if (!safe.success) {
-        const issue = safe.error.issues[0];
+        const issue = safe.issues[0];
         expect(issue?.code).toBe("invalid_type");
         if (issue?.code === "invalid_type") {
           expect(issue.expected).toBe("tuple");
+          expect(issue.received).toBe("string");
         }
       }
     });
 
-    it("fails with too_small issue when tuple length mismatches schema length", () => {
+    it("fails with too_small issue when tuple length is less than minimum length", () => {
       const safe = syncTuple.safeParse(["hello"]);
       expect(safe.success).toBe(false);
       if (!safe.success) {
-        const issue = safe.error.issues[0];
+        const issue = safe.issues[0];
         expect(issue?.code).toBe("too_small");
         expect(issue?.message).toContain(
-          "Expected tuple with 2 elements, received 1",
+          "Expected tuple with at least 2 elements, received 1"
         );
       }
+    });
+
+    it("fails with too_big issue when tuple length exceeds maximum length", () => {
+      const safe = syncTuple.safeParse(["hello", 42, "extra"]);
+      expect(safe.success).toBe(false);
+      if (!safe.success) {
+        const issue = safe.issues[0];
+        expect(issue?.code).toBe("too_big");
+        expect(issue?.message).toContain(
+          "Expected tuple with at most 2 elements, received 3"
+        );
+      }
+    });
+
+    it("parses tuple containing optional trailing schemas", () => {
+      expect(optionalTuple.parse(["only-first"])).toEqual(["only-first"]);
+      expect(optionalTuple.parse(["first", 100])).toEqual(["first", 100]);
+      expect(() => optionalTuple.parse([])).toThrowError(ValidationError);
     });
 
     it("fails with element validation errors on mismatched types", () => {
       const safe = syncTuple.safeParse([123, "not a number"]);
       expect(safe.success).toBe(false);
       if (!safe.success) {
-        expect(safe.error.issues).toHaveLength(2);
-        expect(safe.error.issues[0]?.path).toEqual([0]);
-        expect(safe.error.issues[1]?.path).toEqual([1]);
+        expect(safe.issues).toHaveLength(2);
+        expect(safe.issues[0]?.path).toEqual([0]);
+        expect(safe.issues[1]?.path).toEqual([1]);
       }
     });
 
@@ -349,13 +309,13 @@ describe("Collection Schemas", () => {
       const safe = await asyncTuple.safeParseAsync([999, "invalid"]);
       expect(safe.success).toBe(false);
       if (!safe.success) {
-        expect(safe.error.issues).toHaveLength(2);
+        expect(safe.issues).toHaveLength(2);
       }
     });
 
     it("throws when async tuple is executed in synchronous parse()", () => {
       expect(() => asyncTuple.parse(["test", 1])).toThrowError(
-        "Synchronous parse encountered async tuple elements.",
+        "Synchronous parse encountered async tuple elements."
       );
     });
   });
@@ -366,11 +326,11 @@ describe("Collection Schemas", () => {
   describe("RecordSchema", () => {
     const syncRecord = new RecordSchema(
       new SyncStringSchema(),
-      new SyncNumberSchema(),
+      new SyncNumberSchema()
     );
     const asyncRecord = new RecordSchema(
       new AsyncStringSchema(),
-      new AsyncNumberSchema(),
+      new AsyncNumberSchema()
     );
 
     it("parses valid record objects synchronously", () => {
@@ -383,7 +343,7 @@ describe("Collection Schemas", () => {
         const safe = syncRecord.safeParse(val);
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          const issue = safe.error.issues[0];
+          const issue = safe.issues[0];
           expect(issue?.code).toBe("invalid_type");
           if (issue?.code === "invalid_type") {
             expect(issue.expected).toBe("record");
@@ -397,11 +357,18 @@ describe("Collection Schemas", () => {
       checkInvalid([1, 2, 3], "array");
     });
 
+    it("skips prototype pollution keys (__proto__, constructor)", () => {
+      const payload = JSON.parse('{"__proto__": {"admin": true}, "valid": 10}');
+      const res = syncRecord.parse(payload);
+      expect(res).toEqual({ valid: 10 });
+      expect(Object.prototype.hasOwnProperty.call(res, "__proto__")).toBe(false);
+    });
+
     it("collects nested issues when values in record fail validation", () => {
       const safe = syncRecord.safeParse({ validKey: "not-a-number" });
       expect(safe.success).toBe(false);
       if (!safe.success) {
-        expect(safe.error.issues[0]?.path).toEqual(["validKey"]);
+        expect(safe.issues[0]?.path).toEqual(["validKey"]);
       }
     });
 
@@ -414,13 +381,13 @@ describe("Collection Schemas", () => {
       const safe = await asyncRecord.safeParseAsync({ valid: "invalidNumber" });
       expect(safe.success).toBe(false);
       if (!safe.success) {
-        expect(safe.error.issues[0]?.path).toEqual(["valid"]);
+        expect(safe.issues[0]?.path).toEqual(["valid"]);
       }
     });
 
     it("throws when async record elements are parsed synchronously", () => {
       expect(() => asyncRecord.parse({ a: 1 })).toThrowError(
-        "Synchronous parse encountered async record elements.",
+        "Synchronous parse encountered async record elements."
       );
     });
   });
@@ -441,10 +408,11 @@ describe("Collection Schemas", () => {
       const safe = syncSet.safeParse(["alpha", "beta"]);
       expect(safe.success).toBe(false);
       if (!safe.success) {
-        const issue = safe.error.issues[0];
+        const issue = safe.issues[0];
         expect(issue?.code).toBe("invalid_type");
         if (issue?.code === "invalid_type") {
           expect(issue.expected).toBe("Set");
+          expect(issue.received).toBe("object");
         }
       }
     });
@@ -454,7 +422,7 @@ describe("Collection Schemas", () => {
       const safe = syncSet.safeParse(input);
       expect(safe.success).toBe(false);
       if (!safe.success) {
-        expect(safe.error.issues[0]?.path).toEqual([1]);
+        expect(safe.issues[0]?.path).toEqual([1]);
       }
     });
 
@@ -469,15 +437,70 @@ describe("Collection Schemas", () => {
       const safe = await asyncSet.safeParseAsync(input);
       expect(safe.success).toBe(false);
       if (!safe.success) {
-        expect(safe.error.issues[0]?.path).toEqual([1]);
+        expect(safe.issues[0]?.path).toEqual([1]);
       }
     });
 
     it("throws when async Set elements are parsed synchronously", () => {
       expect(syncSet.parse(new Set())).toEqual(new Set());
       expect(() => asyncSet.parse(new Set(["cat"]))).toThrowError(
-        "Synchronous parse encountered async Set values.",
+        "Synchronous parse encountered async Set values."
       );
+    });
+
+    describe("Set refinement helpers", () => {
+      it(".min() checks minimum set size", () => {
+        const minSet = syncSet.min(2);
+        expect(minSet.parse(new Set(["a", "b"]))).toEqual(new Set(["a", "b"]));
+
+        const safe = minSet.safeParse(new Set(["a"]));
+        expect(safe.success).toBe(false);
+        if (!safe.success) {
+          expect(safe.issues[0]?.code).toBe("too_small");
+          expect(safe.issues[0]?.message).toBe(
+            "Set must contain at least 2 element(s)"
+          );
+        }
+      });
+
+      it(".max() checks maximum set size", () => {
+        const maxSet = syncSet.max(1, "Too many elements in set");
+        expect(maxSet.parse(new Set(["a"]))).toEqual(new Set(["a"]));
+        expect(() => maxSet.parse(new Set(["a", "b"]))).toThrowError(
+          "Too many elements in set"
+        );
+      });
+
+      it(".size() checks exact set size", () => {
+        const sizeSet = syncSet.size(2);
+        expect(sizeSet.parse(new Set(["a", "b"]))).toEqual(new Set(["a", "b"]));
+
+        const safe = sizeSet.safeParse(new Set(["a"]));
+        expect(safe.success).toBe(false);
+        if (!safe.success) {
+          expect(safe.issues[0]?.code).toBe("invalid_value");
+          expect(safe.issues[0]?.message).toBe(
+            "Set must contain exactly 2 element(s)"
+          );
+        }
+      });
+
+      it(".nonempty() rejects empty sets", () => {
+        const nonEmptySet = syncSet.nonempty();
+        expect(nonEmptySet.parse(new Set(["item"]))).toEqual(new Set(["item"]));
+        expect(() => nonEmptySet.parse(new Set())).toThrowError(
+          "Set cannot be empty"
+        );
+      });
+
+      it("handles async Set validation with checks", async () => {
+        const asyncBoundedSet = asyncSet.min(2);
+        const safe = await asyncBoundedSet.safeParseAsync(new Set(["single"]));
+        expect(safe.success).toBe(false);
+        if (!safe.success) {
+          expect(safe.issues[0]?.code).toBe("too_small");
+        }
+      });
     });
   });
 
@@ -487,11 +510,11 @@ describe("Collection Schemas", () => {
   describe("MapSchema", () => {
     const syncMap = new MapSchema(
       new SyncStringSchema(),
-      new SyncNumberSchema(),
+      new SyncNumberSchema()
     );
     const asyncMap = new MapSchema(
       new AsyncStringSchema(),
-      new AsyncNumberSchema(),
+      new AsyncNumberSchema()
     );
 
     it("parses valid Map instances synchronously", () => {
@@ -504,7 +527,7 @@ describe("Collection Schemas", () => {
         new Map([
           ["a", 1],
           ["b", 2],
-        ]),
+        ])
       );
     });
 
@@ -512,10 +535,11 @@ describe("Collection Schemas", () => {
       const safe = syncMap.safeParse({ a: 1 });
       expect(safe.success).toBe(false);
       if (!safe.success) {
-        const issue = safe.error.issues[0];
+        const issue = safe.issues[0];
         expect(issue?.code).toBe("invalid_type");
         if (issue?.code === "invalid_type") {
           expect(issue.expected).toBe("Map");
+          expect(issue.received).toBe("object");
         }
       }
     });
@@ -525,9 +549,9 @@ describe("Collection Schemas", () => {
       const safe = syncMap.safeParse(input);
       expect(safe.success).toBe(false);
       if (!safe.success) {
-        expect(safe.error.issues).toHaveLength(2);
-        expect(safe.error.issues[0]?.path).toEqual(["0.key"]);
-        expect(safe.error.issues[1]?.path).toEqual(["0.val"]);
+        expect(safe.issues).toHaveLength(2);
+        expect(safe.issues[0]?.path).toEqual(["0.key"]);
+        expect(safe.issues[1]?.path).toEqual(["0.val"]);
       }
     });
 
@@ -541,7 +565,7 @@ describe("Collection Schemas", () => {
         new Map([
           ["KEYONE", 20],
           ["KEYTWO", 40],
-        ]),
+        ])
       );
     });
 
@@ -550,16 +574,16 @@ describe("Collection Schemas", () => {
       const safe = await asyncMap.safeParseAsync(input);
       expect(safe.success).toBe(false);
       if (!safe.success) {
-        expect(safe.error.issues).toHaveLength(2);
-        expect(safe.error.issues[0]?.path).toEqual(["0.key"]);
-        expect(safe.error.issues[1]?.path).toEqual(["0.val"]);
+        expect(safe.issues).toHaveLength(2);
+        expect(safe.issues[0]?.path).toEqual(["0.key"]);
+        expect(safe.issues[1]?.path).toEqual(["0.val"]);
       }
     });
 
     it("throws when async Map elements are parsed synchronously", () => {
       const input = new Map([["a", 1]]);
       expect(() => asyncMap.parse(input)).toThrowError(
-        "Synchronous parse encountered async Map elements.",
+        "Synchronous parse encountered async Map elements."
       );
     });
   });

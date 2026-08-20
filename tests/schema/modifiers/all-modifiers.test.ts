@@ -13,79 +13,77 @@ import { Schema } from "../../../src/core/schema.js";
 import { addIssue, type ParseContext } from "../../../src/core/context.js";
 import {
   makeSuccess,
+  makeFailure,
   type DynamicParseReturnType,
-  type AsyncParseReturnType,
+  type ParseResult,
 } from "../../../src/core/result.js";
 import { ValidationError } from "../../../src/core/error.js";
 import type { ValidationIssue } from "../../../src/core/issue.js";
 
-// --- Test Harness Helper Schemas ---
+// --- Test Harness Concrete Helper Schemas ---
 
 class SyncStringSchema extends Schema<string> {
   _parse(input: unknown, ctx: ParseContext): DynamicParseReturnType<string> {
-    if (typeof input === "string") {
-      return makeSuccess(input);
-    }
+    if (typeof input === "string") return makeSuccess(input);
     addIssue(ctx, {
       code: "invalid_type",
       message: "Expected string",
       expected: "string",
       received: typeof input,
     });
-    return { success: false, issues: ctx.issues };
+    return makeFailure(ctx.issues);
   }
 }
 
 class SyncNumberSchema extends Schema<number> {
   _parse(input: unknown, ctx: ParseContext): DynamicParseReturnType<number> {
-    if (typeof input === "number") {
-      return makeSuccess(input);
-    }
+    if (typeof input === "number") return makeSuccess(input);
     addIssue(ctx, {
       code: "invalid_type",
       message: "Expected number",
       expected: "number",
       received: typeof input,
     });
-    return { success: false, issues: ctx.issues };
+    return makeFailure(ctx.issues);
   }
 }
 
 class AsyncStringSchema extends Schema<string> {
-  async _parse(input: unknown, ctx: ParseContext): AsyncParseReturnType<string> {
+  async _parse(input: unknown, ctx: ParseContext): Promise<ParseResult<string>> {
     await new Promise((resolve) => setTimeout(resolve, 2));
-    if (typeof input === "string") {
-      return makeSuccess(input.toUpperCase());
-    }
+    if (typeof input === "string") return makeSuccess(input.toUpperCase());
     addIssue(ctx, {
       code: "invalid_type",
       message: "Expected string async",
       expected: "string",
       received: typeof input,
     });
-    return { success: false, issues: ctx.issues };
+    return makeFailure(ctx.issues);
   }
 }
 
 class AsyncNumberSchema extends Schema<number> {
-  async _parse(input: unknown, ctx: ParseContext): AsyncParseReturnType<number> {
+  async _parse(input: unknown, ctx: ParseContext): Promise<ParseResult<number>> {
     await new Promise((resolve) => setTimeout(resolve, 2));
-    if (typeof input === "number") {
-      return makeSuccess(input * 2);
-    }
+    if (typeof input === "number") return makeSuccess(input * 2);
     addIssue(ctx, {
       code: "invalid_type",
       message: "Expected number async",
       expected: "number",
       received: typeof input,
     });
-    return { success: false, issues: ctx.issues };
+    return makeFailure(ctx.issues);
   }
 }
 
 class SyncObjectSchema extends Schema<{ name: string }> {
   _parse(input: unknown, ctx: ParseContext): DynamicParseReturnType<{ name: string }> {
-    if (typeof input === "object" && input !== null && "name" in input && typeof (input as { name: unknown }).name === "string") {
+    if (
+      typeof input === "object" &&
+      input !== null &&
+      "name" in input &&
+      typeof (input as { name: unknown }).name === "string"
+    ) {
       return makeSuccess({ name: (input as { name: string }).name });
     }
     addIssue(ctx, {
@@ -94,14 +92,19 @@ class SyncObjectSchema extends Schema<{ name: string }> {
       expected: "object",
       received: typeof input,
     });
-    return { success: false, issues: ctx.issues };
+    return makeFailure(ctx.issues);
   }
 }
 
 class AsyncObjectSchema extends Schema<{ name: string }> {
-  async _parse(input: unknown, ctx: ParseContext): AsyncParseReturnType<{ name: string }> {
+  async _parse(input: unknown, ctx: ParseContext): Promise<ParseResult<{ name: string }>> {
     await new Promise((resolve) => setTimeout(resolve, 2));
-    if (typeof input === "object" && input !== null && "name" in input && typeof (input as { name: unknown }).name === "string") {
+    if (
+      typeof input === "object" &&
+      input !== null &&
+      "name" in input &&
+      typeof (input as { name: unknown }).name === "string"
+    ) {
       return makeSuccess({ name: (input as { name: string }).name.toUpperCase() });
     }
     addIssue(ctx, {
@@ -110,7 +113,7 @@ class AsyncObjectSchema extends Schema<{ name: string }> {
       expected: "object",
       received: typeof input,
     });
-    return { success: false, issues: ctx.issues };
+    return makeFailure(ctx.issues);
   }
 }
 
@@ -121,19 +124,25 @@ const asyncNumber = new AsyncNumberSchema();
 const syncObject = new SyncObjectSchema();
 const asyncObject = new AsyncObjectSchema();
 
-describe("All Modifiers Module", () => {
+describe("All Modifiers Module (all-modifiers.ts)", () => {
   // ==========================================
   // CatchSchema
   // ==========================================
   describe("CatchSchema", () => {
     it("returns parsed value when synchronous validation succeeds", () => {
       const schema = new CatchSchema(syncString, "fallback");
+      expect(schema.innerSchema).toBe(syncString);
+      expect(schema.catchValue).toBe("fallback");
       expect(schema.parse("valid input")).toBe("valid input");
     });
 
     it("returns static fallback value and clears issues on synchronous validation failure", () => {
       const schema = new CatchSchema(syncString, "fallback");
-      expect(schema.parse(12345)).toBe("fallback");
+      const safe = schema.safeParse(12345);
+      expect(safe.success).toBe(true);
+      if (safe.success) {
+        expect(safe.data).toBe("fallback");
+      }
     });
 
     it("evaluates functional fallback with contextual error and input payload synchronously", () => {
@@ -175,7 +184,10 @@ describe("All Modifiers Module", () => {
   // ==========================================
   describe("PreprocessSchema", () => {
     it("transforms raw input before passing to inner synchronous schema", () => {
-      const schema = new PreprocessSchema((val) => String(val), syncString);
+      const preprocessor = (val: unknown) => String(val);
+      const schema = new PreprocessSchema(preprocessor, syncString);
+      expect(schema.preprocessor).toBe(preprocessor);
+      expect(schema.innerSchema).toBe(syncString);
       expect(schema.parse(12345)).toBe("12345");
       expect(schema.parse(true)).toBe("true");
     });
@@ -200,6 +212,8 @@ describe("All Modifiers Module", () => {
 
     it("pipes output of first schema into second schema synchronously", () => {
       const schema = new PipeSchema(syncString, stringToNumberTransformer);
+      expect(schema.first).toBe(syncString);
+      expect(schema.second).toBe(stringToNumberTransformer);
       const res = schema.parse("42");
       expect(res).toBe(42);
     });
@@ -251,8 +265,9 @@ describe("All Modifiers Module", () => {
   describe("ReadonlySchema", () => {
     it("freezes object outputs from synchronous parsing", () => {
       const schema = new ReadonlySchema(syncObject);
-      const res = schema.parse({ name: "Alice" });
+      expect(schema.innerSchema).toBe(syncObject);
 
+      const res = schema.parse({ name: "Alice" });
       expect(res).toEqual({ name: "Alice" });
       expect(Object.isFrozen(res)).toBe(true);
       expect(() => {
@@ -308,6 +323,7 @@ describe("All Modifiers Module", () => {
 
     it("maintains brand symbol and parses valid data synchronously", () => {
       const schema = new BrandSchema<string, string, "UserId">(syncString, "UserId");
+      expect(schema.innerSchema).toBe(syncString);
       expect(schema.brandName).toBe("UserId");
       expect(typeof BrandSymbol).toBe("symbol");
 
@@ -344,6 +360,13 @@ describe("All Modifiers Module", () => {
       (output: number) => String(output)
     );
 
+    it("stores decoder and encoder in constructor", () => {
+      const encoder = (n: number) => String(n);
+      const codec = new Codec(syncNumber, encoder as any);
+      expect(codec.decoder).toBe(syncNumber);
+      expect(codec.encoder).toBe(encoder);
+    });
+
     it("decodes input using decoder schema via parse()", () => {
       const decoded = stringToNumberCodec.parse("100");
       expect(decoded).toBe(100);
@@ -366,11 +389,7 @@ describe("All Modifiers Module", () => {
     });
 
     it("fails decoding when input is invalid for decoder schema", () => {
-      const strictCodec = new Codec(
-        syncNumber,
-        (output: number) => output
-      );
-
+      const strictCodec = new Codec(syncNumber, (output: number) => output);
       expect(() => strictCodec.parse("not a number")).toThrowError(ValidationError);
     });
   });

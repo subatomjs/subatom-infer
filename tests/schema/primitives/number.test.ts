@@ -5,7 +5,7 @@ import {
 } from "../../../src/schemas/primitives/number.js";
 import { ValidationError } from "../../../src/core/error.js";
 
-describe("NumberSchema", () => {
+describe("NumberSchema (src/schemas/primitives/number.ts)", () => {
   const baseSchema = new NumberSchema();
 
   describe("Constructor & Type Inference", () => {
@@ -23,6 +23,7 @@ describe("NumberSchema", () => {
       };
       const schema = new NumberSchema([customCheck]);
       expect(schema.checks).toHaveLength(1);
+      expect(schema.checks[0]).toBe(customCheck);
       expect(Object.isFrozen(schema.checks)).toBe(true);
     });
 
@@ -33,11 +34,12 @@ describe("NumberSchema", () => {
   });
 
   describe("Basic Type Validation & NaN Handling", () => {
-    it("parses valid numbers (integers, floats, negative, zero)", () => {
+    it("parses valid numbers (integers, floats, negative, zero, exponential)", () => {
       expect(baseSchema.parse(42)).toBe(42);
       expect(baseSchema.parse(3.14159)).toBe(3.14159);
       expect(baseSchema.parse(0)).toBe(0);
       expect(baseSchema.parse(-100)).toBe(-100);
+      expect(baseSchema.parse(1e5)).toBe(100000);
     });
 
     it("fails with NaN received value when input is Number.NaN", () => {
@@ -45,7 +47,7 @@ describe("NumberSchema", () => {
       expect(safe.success).toBe(false);
       if (!safe.success) {
         expect(safe.error).toBeInstanceOf(ValidationError);
-        const issue = safe.error.issues[0];
+        const issue = safe.issues[0];
         expect(issue?.code).toBe("invalid_type");
         if (issue?.code === "invalid_type") {
           expect(issue.expected).toBe("number");
@@ -56,13 +58,23 @@ describe("NumberSchema", () => {
     });
 
     it("fails when input is not a number primitive", () => {
-      const nonNumbers: unknown[] = ["42", true, false, null, undefined, {}, [], Symbol("num"), 10n];
+      const nonNumbers: unknown[] = [
+        "42",
+        true,
+        false,
+        null,
+        undefined,
+        {},
+        [],
+        Symbol("num"),
+        10n,
+      ];
 
       for (const input of nonNumbers) {
         const safe = baseSchema.safeParse(input);
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          const issue = safe.error.issues[0];
+          const issue = safe.issues[0];
           expect(issue?.code).toBe("invalid_type");
           if (issue?.code === "invalid_type") {
             expect(issue.expected).toBe("number");
@@ -76,7 +88,7 @@ describe("NumberSchema", () => {
 
   describe("Boundaries & Comparisons (min, gte, max, lte, gt, lt)", () => {
     describe("min() & gte()", () => {
-      it("validates minimum boundary (inclusive)", () => {
+      it("validates minimum boundary (inclusive) with default error message", () => {
         const schema = baseSchema.min(10);
         expect(schema.parse(10)).toBe(10);
         expect(schema.parse(15)).toBe(15);
@@ -84,13 +96,15 @@ describe("NumberSchema", () => {
         const safe = schema.safeParse(9.99);
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          const issue = safe.error.issues[0];
+          const issue = safe.issues[0];
           expect(issue?.code).toBe("too_small");
           if (issue?.code === "too_small") {
             expect(issue.minimum).toBe(10);
             expect(issue.inclusive).toBe(true);
             expect(issue.origin).toBe("number");
-            expect(issue.message).toBe("Must be >= 10");
+            expect(issue.message).toBe(
+              "Number must be greater than or equal to 10"
+            );
           }
         }
       });
@@ -102,7 +116,7 @@ describe("NumberSchema", () => {
         const safe = schema.safeParse(8);
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          expect(safe.error.issues[0]?.message).toBe("Custom min failure");
+          expect(safe.issues[0]?.message).toBe("Custom min failure");
         }
       });
 
@@ -117,7 +131,7 @@ describe("NumberSchema", () => {
         const safe = schema.safeParse(15);
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          const issue = safe.error.issues[0];
+          const issue = safe.issues[0];
           expect(issue?.code).toBe("too_small");
           if (issue?.code === "too_small") {
             expect(issue.inclusive).toBe(true);
@@ -128,7 +142,7 @@ describe("NumberSchema", () => {
     });
 
     describe("max() & lte()", () => {
-      it("validates maximum boundary (inclusive)", () => {
+      it("validates maximum boundary (inclusive) with default error message", () => {
         const schema = baseSchema.max(100);
         expect(schema.parse(100)).toBe(100);
         expect(schema.parse(50)).toBe(50);
@@ -136,13 +150,13 @@ describe("NumberSchema", () => {
         const safe = schema.safeParse(100.01);
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          const issue = safe.error.issues[0];
+          const issue = safe.issues[0];
           expect(issue?.code).toBe("too_big");
           if (issue?.code === "too_big") {
             expect(issue.maximum).toBe(100);
             expect(issue.inclusive).toBe(true);
             expect(issue.origin).toBe("number");
-            expect(issue.message).toBe("Must be <= 100");
+            expect(issue.message).toBe("Number must be less than or equal to 100");
           }
         }
       });
@@ -154,7 +168,7 @@ describe("NumberSchema", () => {
         const safe = schema.safeParse(51);
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          expect(safe.error.issues[0]?.message).toBe("Custom max failure");
+          expect(safe.issues[0]?.message).toBe("Custom max failure");
         }
       });
 
@@ -169,7 +183,7 @@ describe("NumberSchema", () => {
         const safe = schema.safeParse(6);
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          const issue = safe.error.issues[0];
+          const issue = safe.issues[0];
           expect(issue?.code).toBe("too_big");
           if (issue?.code === "too_big") {
             expect(issue.inclusive).toBe(true);
@@ -180,7 +194,7 @@ describe("NumberSchema", () => {
     });
 
     describe("gt()", () => {
-      it("validates strictly greater than (exclusive)", () => {
+      it("validates strictly greater than (exclusive) with default error message", () => {
         const schema = baseSchema.gt(0);
         expect(schema.parse(0.001)).toBe(0.001);
         expect(schema.parse(10)).toBe(10);
@@ -188,28 +202,30 @@ describe("NumberSchema", () => {
         const safeEqual = schema.safeParse(0);
         expect(safeEqual.success).toBe(false);
         if (!safeEqual.success) {
-          const issue = safeEqual.error.issues[0];
+          const issue = safeEqual.issues[0];
           expect(issue?.code).toBe("too_small");
           if (issue?.code === "too_small") {
             expect(issue.minimum).toBe(0);
             expect(issue.inclusive).toBe(false);
-            expect(issue.message).toBe("Must be > 0");
+            expect(issue.message).toBe("Number must be strictly greater than 0");
           }
         }
       });
 
-      it("supports custom message for gt()", () => {
+      it("supports custom error message for gt()", () => {
         const schema = baseSchema.gt(10, "Strictly greater than 10 required");
         const safe = schema.safeParse(10);
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          expect(safe.error.issues[0]?.message).toBe("Strictly greater than 10 required");
+          expect(safe.issues[0]?.message).toBe(
+            "Strictly greater than 10 required"
+          );
         }
       });
     });
 
     describe("lt()", () => {
-      it("validates strictly less than (exclusive)", () => {
+      it("validates strictly less than (exclusive) with default error message", () => {
         const schema = baseSchema.lt(10);
         expect(schema.parse(9.99)).toBe(9.99);
         expect(schema.parse(-5)).toBe(-5);
@@ -217,22 +233,22 @@ describe("NumberSchema", () => {
         const safeEqual = schema.safeParse(10);
         expect(safeEqual.success).toBe(false);
         if (!safeEqual.success) {
-          const issue = safeEqual.error.issues[0];
+          const issue = safeEqual.issues[0];
           expect(issue?.code).toBe("too_big");
           if (issue?.code === "too_big") {
             expect(issue.maximum).toBe(10);
             expect(issue.inclusive).toBe(false);
-            expect(issue.message).toBe("Must be < 10");
+            expect(issue.message).toBe("Number must be strictly less than 10");
           }
         }
       });
 
-      it("supports custom message for lt()", () => {
+      it("supports custom error message for lt()", () => {
         const schema = baseSchema.lt(0, "Strictly negative required");
         const safe = schema.safeParse(0);
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          expect(safe.error.issues[0]?.message).toBe("Strictly negative required");
+          expect(safe.issues[0]?.message).toBe("Strictly negative required");
         }
       });
     });
@@ -240,7 +256,7 @@ describe("NumberSchema", () => {
 
   describe("Integer, Safe Integer & Finite Validation", () => {
     describe("int()", () => {
-      it("validates integers and rejects non-integers", () => {
+      it("validates integers and rejects floating point values", () => {
         const schema = baseSchema.int();
         expect(schema.parse(10)).toBe(10);
         expect(schema.parse(-5)).toBe(-5);
@@ -249,7 +265,7 @@ describe("NumberSchema", () => {
         const safeFloat = schema.safeParse(10.5);
         expect(safeFloat.success).toBe(false);
         if (!safeFloat.success) {
-          const issue = safeFloat.error.issues[0];
+          const issue = safeFloat.issues[0];
           expect(issue?.code).toBe("invalid_value");
           if (issue?.code === "invalid_value") {
             expect(issue.received).toBe(10.5);
@@ -263,7 +279,7 @@ describe("NumberSchema", () => {
         const safe = schema.safeParse(1.1);
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          expect(safe.error.issues[0]?.message).toBe("Must be whole number");
+          expect(safe.issues[0]?.message).toBe("Must be whole number");
         }
       });
     });
@@ -271,26 +287,30 @@ describe("NumberSchema", () => {
     describe("safe()", () => {
       it("validates safe IEEE-754 integers", () => {
         const schema = baseSchema.safe();
-        expect(schema.parse(Number.MAX_SAFE_INTEGER)).toBe(Number.MAX_SAFE_INTEGER);
-        expect(schema.parse(Number.MIN_SAFE_INTEGER)).toBe(Number.MIN_SAFE_INTEGER);
+        expect(schema.parse(Number.MAX_SAFE_INTEGER)).toBe(
+          Number.MAX_SAFE_INTEGER
+        );
+        expect(schema.parse(Number.MIN_SAFE_INTEGER)).toBe(
+          Number.MIN_SAFE_INTEGER
+        );
         expect(schema.parse(1000)).toBe(1000);
 
         const unsafeVal = Number.MAX_SAFE_INTEGER + 10;
         const safeUnsafe = schema.safeParse(unsafeVal);
         expect(safeUnsafe.success).toBe(false);
         if (!safeUnsafe.success) {
-          expect(safeUnsafe.error.issues[0]?.message).toBe(
+          expect(safeUnsafe.issues[0]?.message).toBe(
             "Number exceeds IEEE-754 safe integer limits"
           );
         }
       });
 
- it("supports custom error message for safe()", () => {
+      it("supports custom error message for safe()", () => {
         const schema = baseSchema.safe("Outside safe range");
         const safe = schema.safeParse(Math.pow(2, 53));
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          expect(safe.error.issues[0]?.message).toBe("Outside safe range");
+          expect(safe.issues[0]?.message).toBe("Outside safe range");
         }
       });
     });
@@ -304,13 +324,13 @@ describe("NumberSchema", () => {
         const safePosInf = schema.safeParse(Number.POSITIVE_INFINITY);
         expect(safePosInf.success).toBe(false);
         if (!safePosInf.success) {
-          expect(safePosInf.error.issues[0]?.message).toBe("Expected finite number");
+          expect(safePosInf.issues[0]?.message).toBe("Expected finite number");
         }
 
         const safeNegInf = schema.safeParse(Number.NEGATIVE_INFINITY);
         expect(safeNegInf.success).toBe(false);
         if (!safeNegInf.success) {
-          expect(safeNegInf.error.issues[0]?.message).toBe("Expected finite number");
+          expect(safeNegInf.issues[0]?.message).toBe("Expected finite number");
         }
       });
 
@@ -319,7 +339,7 @@ describe("NumberSchema", () => {
         const safe = schema.safeParse(Infinity);
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          expect(safe.error.issues[0]?.message).toBe("Infinity forbidden");
+          expect(safe.issues[0]?.message).toBe("Infinity forbidden");
         }
       });
     });
@@ -333,14 +353,16 @@ describe("NumberSchema", () => {
       const safeZero = schema.safeParse(0);
       expect(safeZero.success).toBe(false);
       if (!safeZero.success) {
-        expect(safeZero.error.issues[0]?.message).toBe("Must be positive (> 0)");
+        expect(safeZero.issues[0]?.message).toBe(
+          "Number must be positive (> 0)"
+        );
       }
 
-      const customSchema = baseSchema.positive("Must be > 0");
+      const customSchema = baseSchema.positive("Must be strictly positive");
       const safeNeg = customSchema.safeParse(-1);
       expect(safeNeg.success).toBe(false);
       if (!safeNeg.success) {
-        expect(safeNeg.error.issues[0]?.message).toBe("Must be > 0");
+        expect(safeNeg.issues[0]?.message).toBe("Must be strictly positive");
       }
     });
 
@@ -352,14 +374,16 @@ describe("NumberSchema", () => {
       const safeNeg = schema.safeParse(-0.01);
       expect(safeNeg.success).toBe(false);
       if (!safeNeg.success) {
-        expect(safeNeg.error.issues[0]?.message).toBe("Must be non-negative (>= 0)");
+        expect(safeNeg.issues[0]?.message).toBe(
+          "Number must be non-negative (>= 0)"
+        );
       }
 
       const customSchema = baseSchema.nonnegative("No negatives allowed");
       const safeCustom = customSchema.safeParse(-1);
       expect(safeCustom.success).toBe(false);
       if (!safeCustom.success) {
-        expect(safeCustom.error.issues[0]?.message).toBe("No negatives allowed");
+        expect(safeCustom.issues[0]?.message).toBe("No negatives allowed");
       }
     });
 
@@ -371,14 +395,16 @@ describe("NumberSchema", () => {
       const safeZero = schema.safeParse(0);
       expect(safeZero.success).toBe(false);
       if (!safeZero.success) {
-        expect(safeZero.error.issues[0]?.message).toBe("Must be negative (< 0)");
+        expect(safeZero.issues[0]?.message).toBe(
+          "Number must be negative (< 0)"
+        );
       }
 
       const customSchema = baseSchema.negative("Must be strictly negative");
       const safePos = customSchema.safeParse(5);
       expect(safePos.success).toBe(false);
       if (!safePos.success) {
-        expect(safePos.error.issues[0]?.message).toBe("Must be strictly negative");
+        expect(safePos.issues[0]?.message).toBe("Must be strictly negative");
       }
     });
 
@@ -390,14 +416,16 @@ describe("NumberSchema", () => {
       const safePos = schema.safeParse(0.001);
       expect(safePos.success).toBe(false);
       if (!safePos.success) {
-        expect(safePos.error.issues[0]?.message).toBe("Must be non-positive (<= 0)");
+        expect(safePos.issues[0]?.message).toBe(
+          "Number must be non-positive (<= 0)"
+        );
       }
 
       const customSchema = baseSchema.nonpositive("No positives allowed");
       const safeCustom = customSchema.safeParse(1);
       expect(safeCustom.success).toBe(false);
       if (!safeCustom.success) {
-        expect(safeCustom.error.issues[0]?.message).toBe("No positives allowed");
+        expect(safeCustom.issues[0]?.message).toBe("No positives allowed");
       }
     });
   });
@@ -412,17 +440,16 @@ describe("NumberSchema", () => {
       const safe = schema.safeParse(14);
       expect(safe.success).toBe(false);
       if (!safe.success) {
-        const issue = safe.error.issues[0];
+        const issue = safe.issues[0];
         expect(issue?.code).toBe("invalid_value");
         if (issue?.code === "invalid_value") {
           expect(issue.received).toBe(14);
-          expect(issue.message).toBe("Must be a multiple of 5");
+          expect(issue.message).toBe("Number must be a multiple of 5");
         }
       }
     });
 
     it("accurately handles floating point remainders without precision errors", () => {
-      // 0.3 is a multiple of 0.1, 0.2 + 0.1 = 0.3
       const floatSchema = baseSchema.multipleOf(0.1);
       expect(floatSchema.parse(0.3)).toBe(0.3);
       expect(floatSchema.parse(1.5)).toBe(1.5);
@@ -436,7 +463,9 @@ describe("NumberSchema", () => {
       const safeFloat = floatSchema.safeParse(0.35);
       expect(safeFloat.success).toBe(false);
       if (!safeFloat.success) {
-        expect(safeFloat.error.issues[0]?.message).toBe("Must be a multiple of 0.1");
+        expect(safeFloat.issues[0]?.message).toBe(
+          "Number must be a multiple of 0.1"
+        );
       }
     });
 
@@ -445,7 +474,43 @@ describe("NumberSchema", () => {
       const safe = schema.safeParse(10);
       expect(safe.success).toBe(false);
       if (!safe.success) {
-        expect(safe.error.issues[0]?.message).toBe("Must be divisible by three");
+        expect(safe.issues[0]?.message).toBe("Must be divisible by three");
+      }
+    });
+  });
+
+  describe("Direct Check Branches & Fallbacks", () => {
+    it("handles checks without explicit metadata limits defined", () => {
+      const customBoundSchema = new NumberSchema([
+        { kind: "min", validate: () => false, message: "Limitless min failure" },
+        { kind: "max", validate: () => false, message: "Limitless max failure" },
+        { kind: "custom", validate: () => false, message: "Arbitrary check failure" },
+      ]);
+
+      const safe = customBoundSchema.safeParse(50);
+      expect(safe.success).toBe(false);
+      if (!safe.success) {
+        expect(safe.issues).toHaveLength(3);
+
+        const issue0 = safe.issues[0];
+        const issue1 = safe.issues[1];
+        const issue2 = safe.issues[2];
+
+        expect(issue0?.code).toBe("too_small");
+        if (issue0?.code === "too_small") {
+          expect(issue0.minimum).toBeUndefined();
+        }
+
+        expect(issue1?.code).toBe("too_big");
+        if (issue1?.code === "too_big") {
+          expect(issue1.maximum).toBeUndefined();
+        }
+
+        expect(issue2?.code).toBe("invalid_value");
+        if (issue2?.code === "invalid_value") {
+          expect(issue2.received).toBe(50);
+          expect(issue2.message).toBe("Arbitrary check failure");
+        }
       }
     });
   });
@@ -458,14 +523,13 @@ describe("NumberSchema", () => {
         .int()
         .multipleOf(5);
 
-      // 7.5 violates min(10), int(), and multipleOf(5)
       const safe = schema.safeParse(7.5);
       expect(safe.success).toBe(false);
       if (!safe.success) {
-        expect(safe.error.issues).toHaveLength(3);
-        expect(safe.error.issues[0]?.code).toBe("too_small");
-        expect(safe.error.issues[1]?.code).toBe("invalid_value");
-        expect(safe.error.issues[2]?.code).toBe("invalid_value");
+        expect(safe.issues).toHaveLength(3);
+        expect(safe.issues[0]?.code).toBe("too_small");
+        expect(safe.issues[1]?.code).toBe("invalid_value");
+        expect(safe.issues[2]?.code).toBe("invalid_value");
       }
     });
 

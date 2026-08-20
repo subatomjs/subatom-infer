@@ -1,182 +1,214 @@
-import {
-  createParseContext,
-  type IssuePayload,
-} from "./context.js";
+import { createParseContext, type ParseContext } from "./context.js";
 import { ValidationError } from "./error.js";
+import type { IssueData } from "./issue.js";
 import {
   isPromise,
-  type SafeParseResult,
+  type DynamicParseReturnType,
+  type ParseResult,
 } from "./result.js";
-import { Schema, getCtor } from "./schema-base.js";
-export * from "./schema-base.js";
-import "./register.js";
-// Type-only imports (Erased at compile time)
-import type { OptionalSchema } from "../schemas/modifiers/optional.js";
-import type { NullableSchema } from "../schemas/modifiers/nullable.js";
-import type { DefaultSchema } from "../schemas/modifiers/default.js";
-import type { PrefaultSchema } from "../schemas/modifiers/prefault.js";
-import type {
-  CatchSchema,
-  PipeSchema,
-  TransformSchema,
-  RefinementSchema,
-  SuperRefineSchema,
-} from "../schemas/modifiers/extended-modifiers.js";
-import type {
-  UnionSchema,
-  IntersectionSchema,
-} from "../schemas/composites/combinators.js";
 
-export * from "./schema-base.js";
+/**
+ * Homomorphic readonly type mapper that safely handles any, primitives,
+ * arrays, and object unions without forcing primitives into indexed object types.
+ */
+export type SchemaReadonly<T> = 0 extends 1 & T
+  ? any
+  : T extends (...args: any[]) => any
+    ? T
+    : T extends readonly (infer U)[]
+      ? readonly U[]
+      : T extends object
+        ? { readonly [K in keyof T]: T[K] }
+        : T;
 
 export interface RefinementContext {
-  addIssue: (issue: IssuePayload) => void;
-  readonly path: readonly (string | number | symbol)[];
+  addIssue: (
+    issue: IssueData & { path?: readonly (string | number)[] },
+  ) => void;
+  readonly path: readonly (string | number)[];
 }
 
-declare module "./schema-base.js" {
-  interface Schema<TOutput, TInput> {
-    parse(input: unknown): TOutput;
-    safeParse(input: unknown): SafeParseResult<TOutput>;
-    parseAsync(input: unknown): Promise<TOutput>;
-    safeParseAsync(input: unknown): Promise<SafeParseResult<TOutput>>;
-    spa(input: unknown): Promise<SafeParseResult<TOutput>>;
-    describe(description: string): this;
-    meta(meta: Record<string, unknown>): this;
-    optional(): Schema<TOutput | undefined, TInput | undefined>;
-    nullable(): Schema<TOutput | null, TInput | null>;
-    nullish(): Schema<TOutput | null | undefined, TInput | null | undefined>;
-    default(defaultValue: TOutput | (() => TOutput)): Schema<TOutput, TInput | undefined>;
-    prefault(defaultValue: TOutput | (() => TOutput)): Schema<TOutput, TInput | undefined>;
-    catch(catchValue: TOutput | ((ctx: { error: unknown; input: unknown }) => TOutput)): Schema<TOutput, TInput>;
-    or<TOrOut, TOrIn>(schema: Schema<TOrOut, TOrIn>): Schema<TOutput | TOrOut, TInput | TOrIn>;
-    and<TAndOut, TAndIn>(schema: Schema<TAndOut, TAndIn>): Schema<TOutput & TAndOut, TInput & TAndIn>;
-    refine(predicate: (value: TOutput) => boolean | Promise<boolean>, message?: string | ((value: TOutput) => string)): Schema<TOutput, TInput>;
-    superRefine(refinement: (value: TOutput, ctx: RefinementContext) => void | Promise<void>): Schema<TOutput, TInput>;
-    check(validator: (value: TOutput) => boolean, message?: string): Schema<TOutput, TInput>;
-    transform<TNewOutput>(transformer: (value: TOutput) => TNewOutput | Promise<TNewOutput>): Schema<TNewOutput, TInput>;
-    pipe<TFinalOutput>(nextSchema: Schema<TFinalOutput, TOutput>): Schema<TFinalOutput, TInput>;
-  }
+export interface SchemaRegistryBridge {
+  optional: <O, I>(
+    schema: Schema<O, I>,
+  ) => Schema<O | undefined, I | undefined>;
+  nullable: <O, I>(schema: Schema<O, I>) => Schema<O | null, I | null>;
+  default: <O, I>(
+    schema: Schema<O, I>,
+    def: O | (() => O),
+  ) => Schema<O, I | undefined>;
+  prefault: <O, I>(
+    schema: Schema<O, I>,
+    def: O | (() => O),
+  ) => Schema<O, I | undefined>;
+  transform: <O, I, Next>(
+    schema: Schema<O, I>,
+    fn: (val: O) => Next | Promise<Next>,
+  ) => Schema<Next, I>;
+  refine: <O, I>(
+    schema: Schema<O, I>,
+    check: (val: O) => boolean | Promise<boolean>,
+    msg?: string | ((val: O) => string),
+  ) => Schema<O, I>;
+  superRefine: <O, I>(
+    schema: Schema<O, I>,
+    refiner: (val: O, ctx: RefinementContext) => void | Promise<void>,
+  ) => Schema<O, I>;
+  pipe: <A, B, C>(first: Schema<B, A>, second: Schema<C, B>) => Schema<C, A>;
+  readonly: <O, I>(
+    schema: Schema<O, I>,
+  ) => Schema<SchemaReadonly<O>, SchemaReadonly<I>>;
+  catch: <O, I>(
+    schema: Schema<O, I>,
+    fallback: O | ((ctx: { error: unknown; input: unknown }) => O),
+  ) => Schema<O, I>;
 }
 
-Schema.prototype.parse = function <TOutput, TInput>(this: Schema<TOutput, TInput>, input: unknown): TOutput {
-  const ctx = createParseContext(false);
-  const result = this._parse(input, ctx);
-  if (isPromise(result)) {
-    throw new Error(
-      "Synchronous parse encountered an asynchronous operation. Use .parseAsync() instead."
-    );
+export const schemaRegistry: Partial<SchemaRegistryBridge> = {};
+
+export abstract class Schema<TOutput, TInput = TOutput> {
+  declare readonly _output: TOutput;
+  declare readonly _input: TInput;
+
+  abstract _parse(
+    input: unknown,
+    ctx: ParseContext,
+  ): DynamicParseReturnType<TOutput>;
+
+  parse(input: unknown): TOutput {
+    const ctx = createParseContext(false);
+    const result = this._parse(input, ctx);
+
+    if (isPromise(result)) {
+      throw new Error(
+        "Asynchronous validation occurred during synchronous parse(). Use parseAsync() instead.",
+      );
+    }
+
+    if (!result.success) {
+      throw new ValidationError(result.issues);
+    }
+
+    return result.data;
   }
-  if (!result.success) throw new ValidationError(result.issues);
-  return result.data;
-};
 
-Schema.prototype.safeParse = function <TOutput, TInput>(this: Schema<TOutput, TInput>, input: unknown): SafeParseResult<TOutput> {
-  try {
-    const data = this.parse(input);
-    return { success: true, data };
-  } catch (err) {
-    if (err instanceof ValidationError) return { success: false, error: err };
-    throw err;
+  async parseAsync(input: unknown): Promise<TOutput> {
+    const ctx = createParseContext(true);
+    const result = await Promise.resolve(this._parse(input, ctx));
+
+    if (!result.success) {
+      throw new ValidationError(result.issues);
+    }
+
+    return result.data;
   }
-};
 
-Schema.prototype.parseAsync = async function <TOutput, TInput>(this: Schema<TOutput, TInput>, input: unknown): Promise<TOutput> {
-  const ctx = createParseContext(true);
-  const resOrPromise = this._parse(input, ctx);
-  const result = isPromise(resOrPromise) ? await resOrPromise : resOrPromise;
-  if (!result.success) throw new ValidationError(result.issues);
-  return result.data;
-};
-
-Schema.prototype.safeParseAsync = async function <TOutput, TInput>(this: Schema<TOutput, TInput>, input: unknown): Promise<SafeParseResult<TOutput>> {
-  try {
-    const data = await this.parseAsync(input);
-    return { success: true, data };
-  } catch (err) {
-    if (err instanceof ValidationError) return { success: false, error: err };
-    throw err;
+  safeParse(input: unknown): ParseResult<TOutput> {
+    const ctx = createParseContext(false);
+    try {
+      const result = this._parse(input, ctx);
+      if (isPromise(result)) {
+        throw new Error(
+          "Encountered Promise during synchronous safeParse(). Use safeParseAsync().",
+        );
+      }
+      return result;
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        return<any> { success: false, issues: error.issues };
+      }
+      throw error;
+    }
   }
-};
 
-Schema.prototype.spa = async function <TOutput, TInput>(this: Schema<TOutput, TInput>, input: unknown): Promise<SafeParseResult<TOutput>> {
-  return this.safeParseAsync(input);
-};
+  async safeParseAsync(input: unknown): Promise<ParseResult<TOutput>> {
+    const ctx = createParseContext(true);
+    try {
+      return await Promise.resolve(this._parse(input, ctx));
+    } catch (error:unknown) {
+      if (error instanceof ValidationError) {
+        return<any> { success: false, issues: error.issues };
+      }
+      throw error;
+    }
+  }
 
-Schema.prototype.describe = function <TOutput, TInput>(this: Schema<TOutput, TInput>, description: string) {
-  (this.metadata as { description: string }).description = description;
-  return this;
-};
+  spa(input: unknown): Promise<ParseResult<TOutput>> {
+    return this.safeParseAsync(input);
+  }
 
-Schema.prototype.meta = function <TOutput, TInput>(this: Schema<TOutput, TInput>, meta: Record<string, unknown>) {
-  (this.metadata as { meta: Record<string, unknown> }).meta = Object.freeze({
-    ...(this.metadata.meta ?? {}),
-    ...meta,
-  });
-  return this;
-};
+  optional(): Schema<TOutput | undefined, TInput | undefined> {
+    if (!schemaRegistry.optional)
+      throw new Error("OptionalSchema not registered");
+    return schemaRegistry.optional(this);
+  }
 
-Schema.prototype.optional = function <TOutput, TInput>(this: Schema<TOutput, TInput>) {
-  const Ctor = getCtor<typeof OptionalSchema>("OptionalSchema");
-  return new Ctor(this);
-};
+  nullable(): Schema<TOutput | null, TInput | null> {
+    if (!schemaRegistry.nullable)
+      throw new Error("NullableSchema not registered");
+    return schemaRegistry.nullable(this);
+  }
 
-Schema.prototype.nullable = function <TOutput, TInput>(this: Schema<TOutput, TInput>) {
-  const Ctor = getCtor<typeof NullableSchema>("NullableSchema");
-  return new Ctor(this);
-};
+  nullish(): Schema<TOutput | null | undefined, TInput | null | undefined> {
+    return this.nullable().optional();
+  }
 
-Schema.prototype.nullish = function <TOutput, TInput>(this: Schema<TOutput, TInput>) {
-  const NullableCtor = getCtor<typeof NullableSchema>("NullableSchema");
-  const OptionalCtor = getCtor<typeof OptionalSchema>("OptionalSchema");
-  return new NullableCtor(new OptionalCtor(this));
-};
+  default(
+    defaultValue: TOutput | (() => TOutput),
+  ): Schema<TOutput, TInput | undefined> {
+    if (!schemaRegistry.default)
+      throw new Error("DefaultSchema not registered");
+    return schemaRegistry.default(this, defaultValue);
+  }
 
-Schema.prototype.default = function <TOutput, TInput>(this: Schema<TOutput, TInput>, defaultValue: TOutput | (() => TOutput)) {
-  const Ctor = getCtor<typeof DefaultSchema>("DefaultSchema");
-  return new Ctor(this, defaultValue);
-};
+  prefault(
+    defaultValue: TOutput | (() => TOutput),
+  ): Schema<TOutput, TInput | undefined> {
+    if (!schemaRegistry.prefault)
+      throw new Error("PrefaultSchema not registered");
+    return schemaRegistry.prefault(this, defaultValue);
+  }
 
-Schema.prototype.prefault = function <TOutput, TInput>(this: Schema<TOutput, TInput>, defaultValue: TOutput | (() => TOutput)) {
-  const Ctor = getCtor<typeof PrefaultSchema>("PrefaultSchema");
-  return new Ctor(this, defaultValue);
-};
+  transform<TNext>(
+    transformer: (value: TOutput) => TNext | Promise<TNext>,
+  ): Schema<TNext, TInput> {
+    if (!schemaRegistry.transform)
+      throw new Error("TransformSchema not registered");
+    return schemaRegistry.transform(this, transformer);
+  }
 
-Schema.prototype.catch = function <TOutput, TInput>(this: Schema<TOutput, TInput>, catchValue: TOutput | ((ctx: { error: unknown; input: unknown }) => TOutput)) {
-  const Ctor = getCtor<typeof CatchSchema>("CatchSchema");
-  return new Ctor(this, catchValue);
-};
+  refine(
+    check: (value: TOutput) => boolean | Promise<boolean>,
+    message: string | ((value: TOutput) => string) = "Invalid input",
+  ): Schema<TOutput, TInput> {
+    if (!schemaRegistry.refine)
+      throw new Error("RefinementSchema not registered");
+    return schemaRegistry.refine(this, check, message);
+  }
 
-Schema.prototype.or = function <TOutput, TInput, TOrOut, TOrIn>(this: Schema<TOutput, TInput>, schema: Schema<TOrOut, TOrIn>) {
-  const Ctor = getCtor<typeof UnionSchema>("UnionSchema");
-  return new Ctor([this, schema]) as any;
-};
+  superRefine(
+    refiner: (value: TOutput, ctx: RefinementContext) => void | Promise<void>,
+  ): Schema<TOutput, TInput> {
+    if (!schemaRegistry.superRefine)
+      throw new Error("SuperRefineSchema not registered");
+    return schemaRegistry.superRefine(this, refiner);
+  }
 
-Schema.prototype.and = function <TOutput, TInput, TAndOut, TAndIn>(this: Schema<TOutput, TInput>, schema: Schema<TAndOut, TAndIn>) {
-  const Ctor = getCtor<typeof IntersectionSchema>("IntersectionSchema");
-  return new Ctor(this, schema) as any;
-};
+  pipe<TNext>(nextSchema: Schema<TNext, TOutput>): Schema<TNext, TInput> {
+    if (!schemaRegistry.pipe) throw new Error("PipeSchema not registered");
+    return schemaRegistry.pipe(this, nextSchema);
+  }
 
-Schema.prototype.refine = function <TOutput, TInput>(this: Schema<TOutput, TInput>, predicate: (value: TOutput) => boolean | Promise<boolean>, message = "Invalid input") {
-  const Ctor = getCtor<typeof RefinementSchema>("RefinementSchema");
-  return new Ctor(this, predicate, message);
-};
+  readonly(): Schema<SchemaReadonly<TOutput>, SchemaReadonly<TInput>> {
+    if (!schemaRegistry.readonly)
+      throw new Error("ReadonlySchema not registered");
+    return schemaRegistry.readonly(this);
+  }
 
-Schema.prototype.superRefine = function <TOutput, TInput>(this: Schema<TOutput, TInput>, refinement: (value: TOutput, ctx: RefinementContext) => void | Promise<void>) {
-  const Ctor = getCtor<typeof SuperRefineSchema>("SuperRefineSchema");
-  return new Ctor(this, refinement);
-};
-
-Schema.prototype.check = function <TOutput, TInput>(this: Schema<TOutput, TInput>, validator: (value: TOutput) => boolean, message = "Check failed") {
-  return this.refine(validator, message);
-};
-
-Schema.prototype.transform = function <TOutput, TInput, TNewOutput>(this: Schema<TOutput, TInput>, transformer: (value: TOutput) => TNewOutput | Promise<TNewOutput>) {
-  const Ctor = getCtor<typeof TransformSchema>("TransformSchema");
-  return new Ctor(this, transformer);
-};
-
-Schema.prototype.pipe = function <TOutput, TInput, TFinalOutput>(this: Schema<TOutput, TInput>, nextSchema: Schema<TFinalOutput, TOutput>) {
-  const Ctor = getCtor<typeof PipeSchema>("PipeSchema");
-  return new Ctor(this, nextSchema);
-};
+  catch(
+    fallback: TOutput | ((ctx: { error: unknown; input: unknown }) => TOutput),
+  ): Schema<TOutput, TInput> {
+    if (!schemaRegistry.catch) throw new Error("CatchSchema not registered");
+    return schemaRegistry.catch(this, fallback);
+  }
+}

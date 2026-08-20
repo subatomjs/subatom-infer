@@ -1,4 +1,3 @@
-// src/schemas/primitives/number.ts
 import { Schema } from "../../core/schema.js";
 import { addIssue, type ParseContext } from "../../core/context.js";
 import { makeFailure, makeSuccess, type DynamicParseReturnType } from "../../core/result.js";
@@ -55,60 +54,112 @@ export class NumberSchema extends Schema<number, number> {
             message: check.message,
           });
         } else {
-          addIssue(ctx, { code: "invalid_value", received: input, message: check.message });
+          addIssue(ctx, {
+            code: "invalid_value",
+            received: input,
+            message: check.message,
+          });
         }
       }
     }
+
     if (ctx.issues.length > 0) return makeFailure(ctx.issues);
     return makeSuccess(input);
   }
 
-  private addCheck(c: NumberCheck) {
-    return new NumberSchema([...this.checks, c]);
+  private addCheck(check: NumberCheck): NumberSchema {
+    return new NumberSchema([...this.checks, check]);
   }
 
-  min(min: number, msg?: string) {
-    return this.addCheck({ kind: "min", validate: (v) => v >= min, message: msg ?? `Must be >= ${min}`, metadata: { min } });
+  min(min: number, msg?: string): NumberSchema {
+    return this.addCheck({
+      kind: "min",
+      validate: (v) => v >= min,
+      message: msg ?? `Number must be greater than or equal to ${min}`,
+      metadata: { min },
+    });
   }
 
-  gte(min: number, msg?: string) { return this.min(min, msg); }
-
-  max(max: number, msg?: string) {
-    return this.addCheck({ kind: "max", validate: (v) => v <= max, message: msg ?? `Must be <= ${max}`, metadata: { max } });
+  gte(min: number, msg?: string): NumberSchema {
+    return this.min(min, msg);
   }
 
-  lte(max: number, msg?: string) { return this.max(max, msg); }
-
-  gt(val: number, msg?: string) {
-    return this.addCheck({ kind: "gt", validate: (v) => v > val, message: msg ?? `Must be > ${val}`, metadata: { min: val } });
+  max(max: number, msg?: string): NumberSchema {
+    return this.addCheck({
+      kind: "max",
+      validate: (v) => v <= max,
+      message: msg ?? `Number must be less than or equal to ${max}`,
+      metadata: { max },
+    });
   }
 
-  lt(val: number, msg?: string) {
-    return this.addCheck({ kind: "lt", validate: (v) => v < val, message: msg ?? `Must be < ${val}`, metadata: { max: val } });
+  lte(max: number, msg?: string): NumberSchema {
+    return this.max(max, msg);
   }
 
-  int(msg = "Expected integer") {
-    return this.addCheck({ kind: "int", validate: (v) => Number.isInteger(v), message: msg });
+  gt(val: number, msg?: string): NumberSchema {
+    return this.addCheck({
+      kind: "gt",
+      validate: (v) => v > val,
+      message: msg ?? `Number must be strictly greater than ${val}`,
+      metadata: { min: val },
+    });
   }
 
-  safe(msg = "Number exceeds IEEE-754 safe integer limits") {
-    return this.addCheck({ kind: "safe", validate: (v) => Number.isSafeInteger(v), message: msg });
+  lt(val: number, msg?: string): NumberSchema {
+    return this.addCheck({
+      kind: "lt",
+      validate: (v) => v < val,
+      message: msg ?? `Number must be strictly less than ${val}`,
+      metadata: { max: val },
+    });
   }
 
-  finite(msg = "Expected finite number") {
-    return this.addCheck({ kind: "finite", validate: (v) => Number.isFinite(v), message: msg });
+  int(msg = "Expected integer"): NumberSchema {
+    return this.addCheck({
+      kind: "int",
+      validate: (v) => Number.isInteger(v),
+      message: msg,
+    });
   }
 
-  positive(msg = "Must be positive (> 0)") { return this.gt(0, msg); }
-  nonnegative(msg = "Must be non-negative (>= 0)") { return this.gte(0, msg); }
-  negative(msg = "Must be negative (< 0)") { return this.lt(0, msg); }
-  nonpositive(msg = "Must be non-positive (<= 0)") { return this.lte(0, msg); }
+  safe(msg = "Number exceeds IEEE-754 safe integer limits"): NumberSchema {
+    return this.addCheck({
+      kind: "safe",
+      validate: (v) => Number.isSafeInteger(v),
+      message: msg,
+    });
+  }
 
-  multipleOf(step: number, msg?: string) {
+  finite(msg = "Expected finite number"): NumberSchema {
+    return this.addCheck({
+      kind: "finite",
+      validate: (v) => Number.isFinite(v),
+      message: msg,
+    });
+  }
+
+  positive(msg = "Number must be positive (> 0)"): NumberSchema {
+    return this.gt(0, msg);
+  }
+
+  nonnegative(msg = "Number must be non-negative (>= 0)"): NumberSchema {
+    return this.gte(0, msg);
+  }
+
+  negative(msg = "Number must be negative (< 0)"): NumberSchema {
+    return this.lt(0, msg);
+  }
+
+  nonpositive(msg = "Number must be non-positive (<= 0)"): NumberSchema {
+    return this.lte(0, msg);
+  }
+
+  multipleOf(step: number, msg?: string): NumberSchema {
     return this.addCheck({
       kind: "multipleOf",
       validate: (v) => floatSafeRemainder(v, step) === 0,
-      message: msg ?? `Must be a multiple of ${step}`,
+      message: msg ?? `Number must be a multiple of ${step}`,
     });
   }
 }

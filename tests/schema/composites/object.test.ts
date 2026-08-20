@@ -1,12 +1,12 @@
 import { describe, it, expect } from "vitest";
 import { ObjectSchema, type RawShape } from "../../../src/schemas/composites/object.js";
-import { Schema } from "../../../src/core/schema-base.js";
+import { Schema } from "../../../src/core/schema.js";
 import { addIssue, type ParseContext } from "../../../src/core/context.js";
 import {
   makeSuccess,
   makeFailure,
   type DynamicParseReturnType,
-  type AsyncParseReturnType,
+  type ParseResult,
 } from "../../../src/core/result.js";
 import { ValidationError } from "../../../src/core/error.js";
 import { OptionalSchema } from "../../../src/schemas/modifiers/optional.js";
@@ -25,7 +25,7 @@ class SyncStringSchema extends Schema<string> {
       expected: "string",
       received: typeof input,
     });
-    return { success: false, issues: ctx.issues };
+    return makeFailure(ctx.issues);
   }
 }
 
@@ -40,12 +40,12 @@ class SyncNumberSchema extends Schema<number> {
       expected: "number",
       received: typeof input,
     });
-    return { success: false, issues: ctx.issues };
+    return makeFailure(ctx.issues);
   }
 }
 
 class AsyncStringSchema extends Schema<string> {
-  async _parse(input: unknown, ctx: ParseContext): AsyncParseReturnType<string> {
+  async _parse(input: unknown, ctx: ParseContext): Promise<ParseResult<string>> {
     await new Promise((res) => setTimeout(res, 2));
     if (typeof input === "string") {
       return makeSuccess(input.toUpperCase());
@@ -56,12 +56,12 @@ class AsyncStringSchema extends Schema<string> {
       expected: "string",
       received: typeof input,
     });
-    return { success: false, issues: ctx.issues };
+    return makeFailure(ctx.issues);
   }
 }
 
 class AsyncNumberSchema extends Schema<number> {
-  async _parse(input: unknown, ctx: ParseContext): AsyncParseReturnType<number> {
+  async _parse(input: unknown, ctx: ParseContext): Promise<ParseResult<number>> {
     await new Promise((res) => setTimeout(res, 2));
     if (typeof input === "number") {
       return makeSuccess(input * 2);
@@ -72,7 +72,7 @@ class AsyncNumberSchema extends Schema<number> {
       expected: "number",
       received: typeof input,
     });
-    return { success: false, issues: ctx.issues };
+    return makeFailure(ctx.issues);
   }
 }
 
@@ -113,7 +113,7 @@ describe("ObjectSchema", () => {
         const safe = userSchema.safeParse(input);
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          const issue = safe.error.issues[0];
+          const issue = safe.issues[0];
           expect(issue?.code).toBe("invalid_type");
           if (issue?.code === "invalid_type") {
             expect(issue.expected).toBe("object");
@@ -129,13 +129,13 @@ describe("ObjectSchema", () => {
       const safe = userSchema.safeParse({ name: 123, age: "invalid" });
       expect(safe.success).toBe(false);
       if (!safe.success) {
-        expect(safe.error.issues).toHaveLength(2);
-        expect(safe.error.issues[0]?.path).toEqual(["name"]);
-        expect(safe.error.issues[1]?.path).toEqual(["age"]);
+        expect(safe.issues).toHaveLength(2);
+        expect(safe.issues[0]?.path).toEqual(["name"]);
+        expect(safe.issues[1]?.path).toEqual(["age"]);
       }
     });
 
-    it("handles undefined fieldSchema inside shape cleanly (line 70 branch)", () => {
+    it("handles undefined fieldSchema inside shape cleanly", () => {
       const sparseShape = {
         valid: syncString,
         missing: undefined as unknown as Schema<unknown, unknown>,
@@ -163,7 +163,7 @@ describe("ObjectSchema", () => {
       const safe = schema.safeParse({ id: 101, extra1: "a", extra2: "b" });
       expect(safe.success).toBe(false);
       if (!safe.success) {
-        const issue = safe.error.issues[0];
+        const issue = safe.issues[0];
         expect(issue?.code).toBe("unrecognized_keys");
         if (issue?.code === "unrecognized_keys") {
           expect(issue.keys).toEqual(["extra1", "extra2"]);
@@ -208,7 +208,7 @@ describe("ObjectSchema", () => {
       const failed = schema.safeParse({ id: 1, extraA: 12345 });
       expect(failed.success).toBe(false);
       if (!failed.success) {
-        expect(failed.error.issues[0]?.path).toEqual(["extraA"]);
+        expect(failed.issues[0]?.path).toEqual(["extraA"]);
       }
     });
 
@@ -221,7 +221,7 @@ describe("ObjectSchema", () => {
       const failed = await schema.safeParseAsync({ id: 1, note: 999 });
       expect(failed.success).toBe(false);
       if (!failed.success) {
-        expect(failed.error.issues[0]?.path).toEqual(["note"]);
+        expect(failed.issues[0]?.path).toEqual(["note"]);
       }
     });
 
@@ -264,7 +264,7 @@ describe("ObjectSchema", () => {
       const safe = await asyncUserSchema.safeParseAsync({ username: 123, score: "invalid" });
       expect(safe.success).toBe(false);
       if (!safe.success) {
-        expect(safe.error.issues).toHaveLength(2);
+        expect(safe.issues).toHaveLength(2);
       }
     });
 

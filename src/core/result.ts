@@ -1,28 +1,38 @@
-import { ValidationError } from "./error.js";
 import type { ValidationIssue } from "./issue.js";
+import { ValidationError } from "./error.js";
 
-export type ParseResult<T> =
-  | { readonly success: true; readonly data: T }
-  | { readonly success: false; readonly issues: readonly ValidationIssue[] };
+export interface ParseSuccess<T> {
+  readonly success: true;
+  readonly data: T;
+}
 
-export type SafeParseResult<T> =
-  | { readonly success: true; readonly data: T; readonly error?: never }
-  | { readonly success: false; readonly error: ValidationError; readonly data?: never };
+export interface ParseFailure {
+  readonly success: false;
+  readonly error: ValidationError;
+  readonly issues: readonly ValidationIssue[];
+}
 
-export type SyncParseReturnType<T> = ParseResult<T>;
-export type AsyncParseReturnType<T> = Promise<ParseResult<T>>;
-export type DynamicParseReturnType<T> = SyncParseReturnType<T> | AsyncParseReturnType<T>;
+export type ParseResult<T> = ParseSuccess<T> | ParseFailure;
+export type SafeParseResult<T> = ParseResult<T>;
+export type DynamicParseReturnType<T> = ParseResult<T> | Promise<ParseResult<T>>;
 
-export const makeSuccess = <T>(data: T): ParseResult<T> => ({
-  success: true,
-  data,
-});
+export function makeSuccess<T>(data: T): ParseSuccess<T> {
+  return { success: true, data };
+}
 
-export const makeFailure = (issues: readonly ValidationIssue[]): ParseResult<never> => ({
-  success: false,
-  issues: Object.freeze(issues),
-});
+export function makeFailure(issues: readonly ValidationIssue[]): ParseFailure {
+  return {
+    success: false,
+    error: new ValidationError(issues),
+    issues,
+  };
+}
 
-export const isPromise = <T>(value: unknown): value is Promise<T> => {
-  return typeof value === "object" && value !== null && "then" in value && typeof (value as { then: unknown }).then === "function";
-};
+export function isPromise<T = unknown>(value: unknown): value is Promise<T> {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    typeof (value as Promise<T>).then === "function" &&
+    typeof (value as Promise<T>).catch === "function"
+  );
+}

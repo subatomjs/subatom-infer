@@ -1,25 +1,20 @@
-import { describe, it, expect } from "vitest";
-import type {
-  IssuePathElement,
-  ValidationIssue,
-} from "../../src/core/issue.js";
+import { describe, it, expect, expectTypeOf } from "vitest";
+import type { IssueData, ValidationIssue } from "../../src/core/issue.js";
 import {
   createParseContext,
   nestContext,
   addIssue,
-  type IssuePayload,
   type ParseContext,
 } from "../../src/core/context.js";
 
 describe("ParseContext Module", () => {
   describe("createParseContext", () => {
-    it("initializes context correctly in synchronous mode", () => {
-      const ctx = createParseContext(false);
+    it("initializes context with default arguments (synchronous, empty path)", () => {
+      const ctx = createParseContext();
 
       expect(ctx.async).toBe(false);
       expect(ctx.issues).toEqual([]);
       expect(ctx.path).toEqual([]);
-      expect(Object.isFrozen(ctx.path)).toBe(true);
     });
 
     it("initializes context correctly in asynchronous mode", () => {
@@ -28,44 +23,42 @@ describe("ParseContext Module", () => {
       expect(ctx.async).toBe(true);
       expect(ctx.issues).toEqual([]);
       expect(ctx.path).toEqual([]);
-      expect(Object.isFrozen(ctx.path)).toBe(true);
     });
 
-    it("ensures path immutability prevents runtime mutations", () => {
-      const ctx = createParseContext(false);
+    it("initializes context with a predefined custom path snapshot", () => {
+      const initialPath = ["root", 0];
+      const ctx = createParseContext(true, initialPath);
 
-      expect(() => {
-        // @ts-expect-error Testing runtime freeze protection
-        ctx.path.push("segment");
-      }).toThrowError(TypeError);
+      expect(ctx.async).toBe(true);
+      expect(ctx.path).toEqual(["root", 0]);
+      expect(ctx.issues).toEqual([]);
     });
   });
 
   describe("nestContext", () => {
     it("creates a new child context with an appended string path segment", () => {
       const rootCtx = createParseContext(false);
-      const childCtx = nestContext(rootCtx, "user" as IssuePathElement);
+      const childCtx = nestContext(rootCtx, "user");
 
       expect(childCtx.path).toEqual(["user"]);
       expect(childCtx.async).toBe(rootCtx.async);
       expect(childCtx.issues).toBe(rootCtx.issues);
-      expect(Object.isFrozen(childCtx.path)).toBe(true);
     });
 
-    it("creates deeply nested contexts with numeric/index path segments", () => {
+    it("creates deeply nested contexts with numeric index path segments", () => {
       const rootCtx = createParseContext(true);
-      const level1 = nestContext(rootCtx, "items" as IssuePathElement);
-      const level2 = nestContext(level1, 0 as unknown as IssuePathElement);
-      const level3 = nestContext(level2, "name" as IssuePathElement);
+      const level1 = nestContext(rootCtx, "items");
+      const level2 = nestContext(level1, 0);
+      const level3 = nestContext(level2, "name");
 
       expect(level3.path).toEqual(["items", 0, "name"]);
       expect(level3.async).toBe(true);
-      expect(Object.isFrozen(level3.path)).toBe(true);
+      expect(level3.issues).toBe(rootCtx.issues);
     });
 
     it("does not mutate the parent context path when nesting", () => {
       const parent = createParseContext(false);
-      const child = nestContext(parent, "sub" as IssuePathElement);
+      const child = nestContext(parent, "sub");
 
       expect(parent.path).toEqual([]);
       expect(child.path).toEqual(["sub"]);
@@ -74,50 +67,74 @@ describe("ParseContext Module", () => {
   });
 
   describe("addIssue", () => {
-    it("appends an issue with the root context path", () => {
+    it("appends an issue with fallback context path when issueData.path is omitted", () => {
       const ctx = createParseContext(false);
-      const payload: IssuePayload = {
-        message: "Invalid type",
+      const issueData: IssueData = {
         code: "invalid_type",
-      } as unknown as IssuePayload;
+        expected: "string",
+        received: "number",
+        message: "Expected string, received number",
+      };
 
-      addIssue(ctx, payload);
+      addIssue(ctx, issueData);
 
       expect(ctx.issues).toHaveLength(1);
       expect(ctx.issues[0]).toEqual({
-        message: "Invalid type",
         code: "invalid_type",
+        expected: "string",
+        received: "number",
+        message: "Expected string, received number",
         path: [],
       });
     });
 
     it("attaches the current nested path snapshot to the created issue", () => {
       const rootCtx = createParseContext(false);
-      const userCtx = nestContext(rootCtx, "user" as IssuePathElement);
-      const emailCtx = nestContext(userCtx, "email" as IssuePathElement);
+      const userCtx = nestContext(rootCtx, "user");
+      const emailCtx = nestContext(userCtx, "email");
 
-      const payload: IssuePayload = {
-        message: "Email is required",
+      const issueData: IssueData = {
         code: "custom",
-      } as unknown as IssuePayload;
+        message: "Email is required",
+      };
 
-      addIssue(emailCtx, payload);
+      addIssue(emailCtx, issueData);
 
       expect(rootCtx.issues).toHaveLength(1);
       expect(rootCtx.issues[0]).toEqual({
-        message: "Email is required",
         code: "custom",
+        message: "Email is required",
         path: ["user", "email"],
+      });
+    });
+
+    it("uses the explicitly provided issueData.path over ctx.path when present", () => {
+      const rootCtx = createParseContext(false);
+      const nestedCtx = nestContext(rootCtx, "fallbackPath");
+
+      const issueDataWithExplicitPath: IssueData & { path: readonly (string | number)[] } = {
+        code: "custom",
+        message: "Explicit override path",
+        path: ["overridden", "custom", 1],
+      };
+
+      addIssue(nestedCtx, issueDataWithExplicitPath);
+
+      expect(rootCtx.issues).toHaveLength(1);
+      expect(rootCtx.issues[0]).toEqual({
+        code: "custom",
+        message: "Explicit override path",
+        path: ["overridden", "custom", 1],
       });
     });
 
     it("shares and accumulates the same issues array across sibling and nested contexts", () => {
       const rootCtx = createParseContext(false);
-      const fieldA = nestContext(rootCtx, "a" as IssuePathElement);
-      const fieldB = nestContext(rootCtx, "b" as IssuePathElement);
+      const fieldA = nestContext(rootCtx, "a");
+      const fieldB = nestContext(rootCtx, "b");
 
-      addIssue(fieldA, { message: "Error A" } as IssuePayload);
-      addIssue(fieldB, { message: "Error B" } as IssuePayload);
+      addIssue(fieldA, { code: "custom", message: "Error A" });
+      addIssue(fieldB, { code: "custom", message: "Error B" });
 
       expect(rootCtx.issues).toHaveLength(2);
       expect(rootCtx.issues[0]?.path).toEqual(["a"]);
@@ -125,11 +142,13 @@ describe("ParseContext Module", () => {
     });
   });
 
-  describe("Type Verification (Compile-time contract)", () => {
-    it("preserves IssuePayload type invariants", () => {
-      type ExpectedPayload = Omit<ValidationIssue, "path">;
-      const payload: IssuePayload = {} as ExpectedPayload as IssuePayload;
-      expect(typeof payload).toBe("object");
+  describe("Type Level Invariants", () => {
+    it("verifies ParseContext structure and issue types", () => {
+      expectTypeOf<ParseContext>().toEqualTypeOf<{
+        readonly async: boolean;
+        readonly path: readonly (string | number)[];
+        readonly issues: ValidationIssue[];
+      }>();
     });
   });
 });

@@ -5,7 +5,7 @@ import {
 } from "../../../src/schemas/primitives/string.js";
 import { ValidationError } from "../../../src/core/error.js";
 
-describe("StringSchema", () => {
+describe("StringSchema (src/schemas/primitives/string.ts)", () => {
   const baseSchema = new StringSchema();
 
   describe("Constructor & Static Typing", () => {
@@ -23,6 +23,7 @@ describe("StringSchema", () => {
       };
       const schema = new StringSchema([customCheck]);
       expect(schema.checks).toHaveLength(1);
+      expect(schema.checks[0]).toBe(customCheck);
       expect(Object.isFrozen(schema.checks)).toBe(true);
     });
 
@@ -39,19 +40,31 @@ describe("StringSchema", () => {
     });
 
     it("fails when input is not a string primitive", () => {
-      const nonStrings: unknown[] = [123, true, false, null, undefined, {}, [], Symbol("str"), 10n];
+      const nonStrings: unknown[] = [
+        123,
+        true,
+        false,
+        null,
+        undefined,
+        {},
+        [],
+        Symbol("str"),
+        10n,
+      ];
 
       for (const input of nonStrings) {
         const safe = baseSchema.safeParse(input);
         expect(safe.success).toBe(false);
         if (!safe.success) {
           expect(safe.error).toBeInstanceOf(ValidationError);
-          const issue = safe.error.issues[0];
+          const issue = safe.issues[0];
           expect(issue?.code).toBe("invalid_type");
           if (issue?.code === "invalid_type") {
             expect(issue.expected).toBe("string");
             expect(issue.received).toBe(typeof input);
-            expect(issue.message).toBe(`Expected string, received ${typeof input}`);
+            expect(issue.message).toBe(
+              `Expected string, received ${typeof input}`
+            );
           }
         }
       }
@@ -71,13 +84,15 @@ describe("StringSchema", () => {
         const safe = schema.safeParse("ab");
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          const issue = safe.error.issues[0];
+          const issue = safe.issues[0];
           expect(issue?.code).toBe("too_small");
           if (issue?.code === "too_small") {
             expect(issue.minimum).toBe(3);
             expect(issue.inclusive).toBe(true);
             expect(issue.origin).toBe("string");
-            expect(issue.message).toBe("String must contain at least 3 char(s)");
+            expect(issue.message).toBe(
+              "String must contain at least 3 character(s)"
+            );
           }
         }
       });
@@ -87,7 +102,7 @@ describe("StringSchema", () => {
         const safe = schema.safeParse("a");
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          expect(safe.error.issues[0]?.message).toBe("At least 3 characters needed");
+          expect(safe.issues[0]?.message).toBe("At least 3 characters needed");
         }
       });
     });
@@ -104,13 +119,15 @@ describe("StringSchema", () => {
         const safe = schema.safeParse("abcdef");
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          const issue = safe.error.issues[0];
+          const issue = safe.issues[0];
           expect(issue?.code).toBe("too_big");
           if (issue?.code === "too_big") {
             expect(issue.maximum).toBe(5);
             expect(issue.inclusive).toBe(true);
             expect(issue.origin).toBe("string");
-            expect(issue.message).toBe("String must contain at most 5 char(s)");
+            expect(issue.message).toBe(
+              "String must contain at most 5 character(s)"
+            );
           }
         }
       });
@@ -120,7 +137,7 @@ describe("StringSchema", () => {
         const safe = schema.safeParse("abcdef");
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          expect(safe.error.issues[0]?.message).toBe("At most 5 characters allowed");
+          expect(safe.issues[0]?.message).toBe("At most 5 characters allowed");
         }
       });
     });
@@ -136,11 +153,13 @@ describe("StringSchema", () => {
         const safe = schema.safeParse("abc");
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          const issue = safe.error.issues[0];
+          const issue = safe.issues[0];
           expect(issue?.code).toBe("invalid_format");
           if (issue?.code === "invalid_format") {
             expect(issue.format).toBe("length");
-            expect(issue.message).toBe("String must contain exactly 4 char(s)");
+            expect(issue.message).toBe(
+              "String must contain exactly 4 character(s)"
+            );
           }
         }
       });
@@ -150,7 +169,7 @@ describe("StringSchema", () => {
         const safe = schema.safeParse("abcde");
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          expect(safe.error.issues[0]?.message).toBe("Exact 4 chars required");
+          expect(safe.issues[0]?.message).toBe("Exact 4 chars required");
         }
       });
     });
@@ -161,7 +180,9 @@ describe("StringSchema", () => {
       it("validates standard email addresses", () => {
         const schema = baseSchema.email();
         expect(schema.parse("user@example.com")).toBe("user@example.com");
-        expect(schema.parse("first.last+tag@sub.domain.co")).toBe("first.last+tag@sub.domain.co");
+        expect(schema.parse("first.last+tag@sub.domain.co")).toBe(
+          "first.last+tag@sub.domain.co"
+        );
       });
 
       it("fails on invalid email formats with default and custom message", () => {
@@ -169,14 +190,14 @@ describe("StringSchema", () => {
         const safe = schema.safeParse("not-an-email");
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          expect(safe.error.issues[0]?.message).toBe("Invalid email address");
+          expect(safe.issues[0]?.message).toBe("Invalid email address");
         }
 
         const customSchema = baseSchema.email("Custom invalid email");
         const safeCustom = customSchema.safeParse("user@");
         expect(safeCustom.success).toBe(false);
         if (!safeCustom.success) {
-          expect(safeCustom.error.issues[0]?.message).toBe("Custom invalid email");
+          expect(safeCustom.issues[0]?.message).toBe("Custom invalid email");
         }
       });
     });
@@ -185,7 +206,9 @@ describe("StringSchema", () => {
       it("validates valid URLs across different protocols", () => {
         const schema = baseSchema.url();
         expect(schema.parse("https://example.com")).toBe("https://example.com");
-        expect(schema.parse("ftp://files.example.org/dir")).toBe("ftp://files.example.org/dir");
+        expect(schema.parse("ftp://files.example.org/dir")).toBe(
+          "ftp://files.example.org/dir"
+        );
       });
 
       it("fails on malformed URLs with default and custom message", () => {
@@ -193,14 +216,14 @@ describe("StringSchema", () => {
         const safe = schema.safeParse("not a url");
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          expect(safe.error.issues[0]?.message).toBe("Invalid URL");
+          expect(safe.issues[0]?.message).toBe("Invalid URL");
         }
 
         const customSchema = baseSchema.url("Custom invalid URL");
         const safeCustom = customSchema.safeParse("http://");
         expect(safeCustom.success).toBe(false);
         if (!safeCustom.success) {
-          expect(safeCustom.error.issues[0]?.message).toBe("Custom invalid URL");
+          expect(safeCustom.issues[0]?.message).toBe("Custom invalid URL");
         }
       });
     });
@@ -209,7 +232,9 @@ describe("StringSchema", () => {
       it("validates HTTP and HTTPS URLs strictly", () => {
         const schema = baseSchema.httpUrl();
         expect(schema.parse("http://example.com")).toBe("http://example.com");
-        expect(schema.parse("https://example.com/path?q=1")).toBe("https://example.com/path?q=1");
+        expect(schema.parse("https://example.com/path?q=1")).toBe(
+          "https://example.com/path?q=1"
+        );
       });
 
       it("fails on non-HTTP/HTTPS URLs and invalid URLs", () => {
@@ -217,20 +242,20 @@ describe("StringSchema", () => {
         const safeFtp = schema.safeParse("ftp://example.com");
         expect(safeFtp.success).toBe(false);
         if (!safeFtp.success) {
-          expect(safeFtp.error.issues[0]?.message).toBe("Invalid HTTP/HTTPS URL");
+          expect(safeFtp.issues[0]?.message).toBe("Invalid HTTP/HTTPS URL");
         }
 
         const safeInvalid = schema.safeParse("invalid-url");
         expect(safeInvalid.success).toBe(false);
         if (!safeInvalid.success) {
-          expect(safeInvalid.error.issues[0]?.message).toBe("Invalid HTTP/HTTPS URL");
+          expect(safeInvalid.issues[0]?.message).toBe("Invalid HTTP/HTTPS URL");
         }
 
         const customSchema = baseSchema.httpUrl("Must be web URL");
         const safeCustom = customSchema.safeParse("ws://example.com");
         expect(safeCustom.success).toBe(false);
         if (!safeCustom.success) {
-          expect(safeCustom.error.issues[0]?.message).toBe("Must be web URL");
+          expect(safeCustom.issues[0]?.message).toBe("Must be web URL");
         }
       });
     });
@@ -245,17 +270,17 @@ describe("StringSchema", () => {
 
       it("fails on invalid UUID with default and custom message", () => {
         const schema = baseSchema.uuid();
-        const safe = schema.safeParse("123e4567-e89b-62d3-a456-426614174000"); // version 6 invalid for regex
+        const safe = schema.safeParse("123e4567-e89b-62d3-a456-426614174000");
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          expect(safe.error.issues[0]?.message).toBe("Invalid UUID");
+          expect(safe.issues[0]?.message).toBe("Invalid UUID");
         }
 
         const customSchema = baseSchema.uuid("Custom invalid UUID");
         const safeCustom = customSchema.safeParse("invalid-uuid");
         expect(safeCustom.success).toBe(false);
         if (!safeCustom.success) {
-          expect(safeCustom.error.issues[0]?.message).toBe("Custom invalid UUID");
+          expect(safeCustom.issues[0]?.message).toBe("Custom invalid UUID");
         }
       });
 
@@ -266,7 +291,7 @@ describe("StringSchema", () => {
         const safe = schema.safeParse("invalid-guid");
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          expect(safe.error.issues[0]?.message).toBe("Invalid GUID error");
+          expect(safe.issues[0]?.message).toBe("Invalid GUID error");
         }
       });
     });
@@ -280,7 +305,7 @@ describe("StringSchema", () => {
         const safe = schema.safeParse("invalid-cuid");
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          expect(safe.error.issues[0]?.message).toBe("Invalid CUID");
+          expect(safe.issues[0]?.message).toBe("Invalid CUID");
         }
 
         const custom = baseSchema.cuid("Custom CUID error");
@@ -292,10 +317,10 @@ describe("StringSchema", () => {
         const validCuid2 = "a1b2c3d4e5";
         expect(schema.parse(validCuid2)).toBe(validCuid2);
 
-        const safe = schema.safeParse("1abc"); // Must start with letter
+        const safe = schema.safeParse("1abc");
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          expect(safe.error.issues[0]?.message).toBe("Invalid CUID2");
+          expect(safe.issues[0]?.message).toBe("Invalid CUID2");
         }
 
         const custom = baseSchema.cuid2("Custom CUID2 error");
@@ -309,10 +334,10 @@ describe("StringSchema", () => {
         const validUlid = "01ARZ3NDEKTSV4RRFFQ69G5FAV";
         expect(schema.parse(validUlid)).toBe(validUlid);
 
-        const safe = schema.safeParse("01ARZ3NDEKTSV4RRFFQ69G5FA"); // 25 chars
+        const safe = schema.safeParse("01ARZ3NDEKTSV4RRFFQ69G5FA");
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          expect(safe.error.issues[0]?.message).toBe("Invalid ULID");
+          expect(safe.issues[0]?.message).toBe("Invalid ULID");
         }
 
         const custom = baseSchema.ulid("Custom ULID error");
@@ -329,7 +354,7 @@ describe("StringSchema", () => {
         const safe = schema.safeParse("short-nano");
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          expect(safe.error.issues[0]?.message).toBe("Invalid NanoID");
+          expect(safe.issues[0]?.message).toBe("Invalid NanoID");
         }
 
         const custom = baseSchema.nanoid("Custom NanoID error");
@@ -345,14 +370,19 @@ describe("StringSchema", () => {
         const safe = schema.safeParse("123a45");
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          expect(safe.error.issues[0]?.message).toBe("Invalid pattern");
+          expect(safe.issues[0]?.message).toBe("Invalid pattern");
         }
 
-        const custom = baseSchema.regex(/^[A-Z]+$/, "Must be uppercase letters only");
+        const custom = baseSchema.regex(
+          /^[A-Z]+$/,
+          "Must be uppercase letters only"
+        );
         const safeCustom = custom.safeParse("abc");
         expect(safeCustom.success).toBe(false);
         if (!safeCustom.success) {
-          expect(safeCustom.error.issues[0]?.message).toBe("Must be uppercase letters only");
+          expect(safeCustom.issues[0]?.message).toBe(
+            "Must be uppercase letters only"
+          );
         }
       });
     });
@@ -365,7 +395,7 @@ describe("StringSchema", () => {
         const safe = schema.safeParse("post_fix");
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          expect(safe.error.issues[0]?.message).toBe('Must start with "pre_"');
+          expect(safe.issues[0]?.message).toBe('Must start with "pre_"');
         }
 
         const custom = baseSchema.startsWith("a", "Must start with a");
@@ -379,7 +409,7 @@ describe("StringSchema", () => {
         const safe = schema.safeParse("the_start");
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          expect(safe.error.issues[0]?.message).toBe('Must end with "_end"');
+          expect(safe.issues[0]?.message).toBe('Must end with "_end"');
         }
 
         const custom = baseSchema.endsWith("z", "Must end with z");
@@ -388,12 +418,14 @@ describe("StringSchema", () => {
 
       it("includes() checks substring with default and custom message", () => {
         const schema = baseSchema.includes("target");
-        expect(schema.parse("find the target here")).toBe("find the target here");
+        expect(schema.parse("find the target here")).toBe(
+          "find the target here"
+        );
 
         const safe = schema.safeParse("missing");
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          expect(safe.error.issues[0]?.message).toBe('Must contain "target"');
+          expect(safe.issues[0]?.message).toBe('Must contain "target"');
         }
 
         const custom = baseSchema.includes("mid", "Must contain mid");
@@ -404,12 +436,14 @@ describe("StringSchema", () => {
     describe("datetime(), date(), time(), duration()", () => {
       it("datetime() validates ISO 8601 date-time strings", () => {
         const schema = baseSchema.datetime();
-        expect(schema.parse("2026-08-19T12:00:00.000Z")).toBe("2026-08-19T12:00:00.000Z");
+        expect(schema.parse("2026-08-20T12:00:00.000Z")).toBe(
+          "2026-08-20T12:00:00.000Z"
+        );
 
         const safe = schema.safeParse("invalid-datetime");
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          expect(safe.error.issues[0]?.message).toBe("Invalid ISO 8601 DateTime");
+          expect(safe.issues[0]?.message).toBe("Invalid ISO 8601 DateTime");
         }
 
         const custom = baseSchema.datetime("Custom datetime error");
@@ -418,12 +452,14 @@ describe("StringSchema", () => {
 
       it("date() validates YYYY-MM-DD ISO date strings", () => {
         const schema = baseSchema.date();
-        expect(schema.parse("2026-08-19")).toBe("2026-08-19");
+        expect(schema.parse("2026-08-20")).toBe("2026-08-20");
 
-        const safeFormat = schema.safeParse("2026/08/19");
+        const safeFormat = schema.safeParse("2026/08/20");
         expect(safeFormat.success).toBe(false);
         if (!safeFormat.success) {
-          expect(safeFormat.error.issues[0]?.message).toBe("Invalid ISO Date (YYYY-MM-DD)");
+          expect(safeFormat.issues[0]?.message).toBe(
+            "Invalid ISO Date (YYYY-MM-DD)"
+          );
         }
 
         const safeInvalidDate = schema.safeParse("2026-99-99");
@@ -441,7 +477,7 @@ describe("StringSchema", () => {
         const safe = schema.safeParse("25:00:00");
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          expect(safe.error.issues[0]?.message).toBe("Invalid ISO Time (HH:MM:SS)");
+          expect(safe.issues[0]?.message).toBe("Invalid ISO Time (HH:MM:SS)");
         }
 
         const custom = baseSchema.time("Custom time error");
@@ -456,7 +492,7 @@ describe("StringSchema", () => {
         const safe = schema.safeParse("P");
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          expect(safe.error.issues[0]?.message).toBe("Invalid ISO 8601 Duration");
+          expect(safe.issues[0]?.message).toBe("Invalid ISO 8601 Duration");
         }
 
         const custom = baseSchema.duration("Custom duration error");
@@ -473,7 +509,7 @@ describe("StringSchema", () => {
         const safe = schema.safeParse("256.0.0.1");
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          expect(safe.error.issues[0]?.message).toBe("Invalid IPv4 address");
+          expect(safe.issues[0]?.message).toBe("Invalid IPv4 address");
         }
 
         const custom = baseSchema.ipv4("Custom IPv4 error");
@@ -488,7 +524,7 @@ describe("StringSchema", () => {
         const safe = schema.safeParse("1234:5678");
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          expect(safe.error.issues[0]?.message).toBe("Invalid IPv6 address");
+          expect(safe.issues[0]?.message).toBe("Invalid IPv6 address");
         }
 
         const custom = baseSchema.ipv6("Custom IPv6 error");
@@ -503,7 +539,7 @@ describe("StringSchema", () => {
         const safe = schema.safeParse("-invalid.com");
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          expect(safe.error.issues[0]?.message).toBe("Invalid RFC 1123 Hostname");
+          expect(safe.issues[0]?.message).toBe("Invalid RFC 1123 Hostname");
         }
 
         const custom = baseSchema.hostname("Custom hostname error");
@@ -529,7 +565,7 @@ describe("StringSchema", () => {
     });
 
     it("normalize() applies Unicode normalization forms (NFC default, NFD, NFKC, NFKD)", () => {
-      const text = "\u00E9"; // 'é' in NFC
+      const text = "\u00E9";
       const defaultSchema = baseSchema.normalize();
       expect(defaultSchema.parse(text)).toBe(text.normalize("NFC"));
 
@@ -544,6 +580,42 @@ describe("StringSchema", () => {
     });
   });
 
+  describe("Direct Check Branches & Fallbacks", () => {
+    it("handles checks without explicit metadata limits defined", () => {
+      const customBoundSchema = new StringSchema([
+        { kind: "min", validate: () => false, message: "Limitless min failure" },
+        { kind: "max", validate: () => false, message: "Limitless max failure" },
+        { kind: "custom_kind", validate: () => false, message: "Custom format failure" },
+      ]);
+
+      const safe = customBoundSchema.safeParse("test");
+      expect(safe.success).toBe(false);
+      if (!safe.success) {
+        expect(safe.issues).toHaveLength(3);
+
+        const issue0 = safe.issues[0];
+        const issue1 = safe.issues[1];
+        const issue2 = safe.issues[2];
+
+        expect(issue0?.code).toBe("too_small");
+        if (issue0?.code === "too_small") {
+          expect(issue0.minimum).toBeUndefined();
+        }
+
+        expect(issue1?.code).toBe("too_big");
+        if (issue1?.code === "too_big") {
+          expect(issue1.maximum).toBeUndefined();
+        }
+
+        expect(issue2?.code).toBe("invalid_format");
+        if (issue2?.code === "invalid_format") {
+          expect(issue2.format).toBe("custom_kind");
+          expect(issue2.message).toBe("Custom format failure");
+        }
+      }
+    });
+  });
+
   describe("Compound & Chained Transformations with Validations", () => {
     it("applies mutation before downstream validations", () => {
       const schema = baseSchema.trim().toLowerCase().min(5).email();
@@ -552,7 +624,7 @@ describe("StringSchema", () => {
       const safe = schema.safeParse("   A@B   ");
       expect(safe.success).toBe(false);
       if (!safe.success) {
-        expect(safe.error.issues[0]?.code).toBe("too_small");
+        expect(safe.issues[0]?.code).toBe("too_small");
       }
     });
 
@@ -561,9 +633,9 @@ describe("StringSchema", () => {
       const safe = schema.safeParse("ab");
       expect(safe.success).toBe(false);
       if (!safe.success) {
-        expect(safe.error.issues).toHaveLength(2);
-        expect(safe.error.issues[0]?.code).toBe("too_small");
-        expect(safe.error.issues[1]?.code).toBe("invalid_format");
+        expect(safe.issues).toHaveLength(2);
+        expect(safe.issues[0]?.code).toBe("too_small");
+        expect(safe.issues[1]?.code).toBe("invalid_format");
       }
     });
   });

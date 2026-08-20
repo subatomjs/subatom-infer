@@ -4,8 +4,9 @@ import { Schema } from "../../../src/core/schema.js";
 import { addIssue, type ParseContext } from "../../../src/core/context.js";
 import {
   makeSuccess,
+  makeFailure,
   type DynamicParseReturnType,
-  type AsyncParseReturnType,
+  type ParseResult,
 } from "../../../src/core/result.js";
 import { ValidationError } from "../../../src/core/error.js";
 
@@ -22,12 +23,12 @@ class SyncStringSchema extends Schema<string> {
       expected: "string",
       received: typeof input,
     });
-    return { success: false, issues: ctx.issues };
+    return makeFailure(ctx.issues);
   }
 }
 
 class AsyncNumberSchema extends Schema<number> {
-  async _parse(input: unknown, ctx: ParseContext): AsyncParseReturnType<number> {
+  async _parse(input: unknown, ctx: ParseContext): Promise<ParseResult<number>> {
     await new Promise((resolve) => setTimeout(resolve, 2));
     if (typeof input === "number") {
       return makeSuccess(input * 2);
@@ -38,14 +39,14 @@ class AsyncNumberSchema extends Schema<number> {
       expected: "number",
       received: typeof input,
     });
-    return { success: false, issues: ctx.issues };
+    return makeFailure(ctx.issues);
   }
 }
 
 const syncString = new SyncStringSchema();
 const asyncNumber = new AsyncNumberSchema();
 
-describe("TransformSchema", () => {
+describe("TransformSchema (transform.ts)", () => {
   describe("Constructor & Static Type Inference", () => {
     it("stores innerSchema and transformer reference properly", () => {
       const transformer = (val: string) => val.length;
@@ -78,7 +79,7 @@ describe("TransformSchema", () => {
       expect(safe.success).toBe(false);
       if (!safe.success) {
         expect(safe.error).toBeInstanceOf(ValidationError);
-        const issue = safe.error.issues[0];
+        const issue = safe.issues[0];
         expect(issue?.code).toBe("custom");
         expect(issue?.message).toBe("Transformation failed explicitly");
       }
@@ -93,9 +94,9 @@ describe("TransformSchema", () => {
       expect(safe.success).toBe(false);
       if (!safe.success) {
         expect(safe.error).toBeInstanceOf(ValidationError);
-        const issue = safe.error.issues[0];
+        const issue = safe.issues[0];
         expect(issue?.code).toBe("custom");
-        expect(issue?.message).toBe("Transformer thrown an error");
+        expect(issue?.message).toBe("Transformer threw an error");
       }
     });
 
@@ -110,7 +111,7 @@ describe("TransformSchema", () => {
       expect(safe.success).toBe(false);
       expect(transformCalled).toBe(false);
       if (!safe.success) {
-        const issue = safe.error.issues[0];
+        const issue = safe.issues[0];
         expect(issue?.code).toBe("invalid_type");
       }
     });
@@ -127,7 +128,7 @@ describe("TransformSchema", () => {
       expect(result).toBe(11);
     });
 
-    it("throws when async transformer is executed in synchronous parse() mode", () => {
+    it("catches asynchronous transform execution during synchronous parse and creates custom issue", () => {
       const schema = new TransformSchema(syncString, async (val) => {
         await new Promise((res) => setTimeout(res, 2));
         return val.length;
@@ -136,19 +137,69 @@ describe("TransformSchema", () => {
       const safe = schema.safeParse("trigger");
       expect(safe.success).toBe(false);
       if (!safe.success) {
-        expect(safe.error.issues[0]?.message).toBe(
+        expect(safe.issues[0]?.message).toBe(
           "Asynchronous transform executed during synchronous parse."
         );
+      }
+    });
+
+    it("catches Error instances from rejected async transform in parseAsync()", async () => {
+      const schema = new TransformSchema(syncString, async () => {
+        await new Promise((res) => setTimeout(res, 2));
+        throw new Error("Async transformation failed");
+      });
+
+      const safe = await schema.safeParseAsync("trigger");
+      expect(safe.success).toBe(false);
+      if (!safe.success) {
+        expect(safe.issues[0]?.message).toBe("Async transformation failed");
+      }
+    });
+
+    it("catches non-Error rejected values in async transform in parseAsync()", async () => {
+      const schema = new TransformSchema(syncString, async () => {
+        await new Promise((res) => setTimeout(res, 2));
+        return Promise.reject("raw async rejection");
+      });
+
+      const safe = await schema.safeParseAsync("trigger");
+      expect(safe.success).toBe(false);
+      if (!safe.success) {
+        expect(safe.issues[0]?.message).toBe("Transformer threw an error");
       }
     });
   });
 
   describe("Asynchronous Inner Schema Integration", () => {
     it("transforms data synchronously after asynchronous inner schema succeeds", async () => {
-      // asyncNumber doubles input: 20 * 2 = 40; then transformer maps to string: "40"
+      // asyncNumber doubles input: 20 * 2 = 40; then transformer maps to string: "val_40"
       const schema = new TransformSchema(asyncNumber, (val) => `val_${val}`);
       const result = await schema.parseAsync(20);
       expect(result).toBe("val_40");
+    });
+
+    it("catches Error instances thrown synchronously after async inner schema succeeds", async () => {
+      const schema = new TransformSchema(asyncNumber, () => {
+        throw new Error("Sync transform failed after async inner");
+      });
+
+      const safe = await schema.safeParseAsync(20);
+      expect(safe.success).toBe(false);
+      if (!safe.success) {
+        expect(safe.issues[0]?.message).toBe("Sync transform failed after async inner");
+      }
+    });
+
+    it("catches non-Error thrown objects synchronously after async inner schema succeeds", async () => {
+      const schema = new TransformSchema(asyncNumber, () => {
+        throw "string error after async inner";
+      });
+
+      const safe = await schema.safeParseAsync(20);
+      expect(safe.success).toBe(false);
+      if (!safe.success) {
+        expect(safe.issues[0]?.message).toBe("Transformer threw an error");
+      }
     });
 
     it("transforms data asynchronously after asynchronous inner schema succeeds", async () => {
@@ -162,6 +213,32 @@ describe("TransformSchema", () => {
       expect(result).toBe(35);
     });
 
+    it("catches Error instances from rejected async transform after async inner schema succeeds", async () => {
+      const schema = new TransformSchema(asyncNumber, async () => {
+        await new Promise((res) => setTimeout(res, 2));
+        throw new Error("Async transform rejection after async inner");
+      });
+
+      const safe = await schema.safeParseAsync(15);
+      expect(safe.success).toBe(false);
+      if (!safe.success) {
+        expect(safe.issues[0]?.message).toBe("Async transform rejection after async inner");
+      }
+    });
+
+    it("catches non-Error rejections from async transform after async inner schema succeeds", async () => {
+      const schema = new TransformSchema(asyncNumber, async () => {
+        await new Promise((res) => setTimeout(res, 2));
+        return Promise.reject("non-error rejection");
+      });
+
+      const safe = await schema.safeParseAsync(15);
+      expect(safe.success).toBe(false);
+      if (!safe.success) {
+        expect(safe.issues[0]?.message).toBe("Transformer threw an error");
+      }
+    });
+
     it("short-circuits and skips transformer when asynchronous inner schema fails", async () => {
       let transformInvoked = false;
       const schema = new TransformSchema(asyncNumber, (val) => {
@@ -173,7 +250,7 @@ describe("TransformSchema", () => {
       expect(safe.success).toBe(false);
       expect(transformInvoked).toBe(false);
       if (!safe.success) {
-        expect(safe.error.issues[0]?.message).toBe("Expected number async");
+        expect(safe.issues[0]?.message).toBe("Expected number async");
       }
     });
   });

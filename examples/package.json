@@ -1,0 +1,20 @@
+{
+  "name": "subatom-infer-examples",
+  "version": "1.0.0",
+  "description": "Testing directory of subatom infer package",
+  "keywords": [
+    "Subatom-Infer-Sample"
+  ],
+  "license": "MIT",
+  "author": "Kunal Chandra Das <kunalchandradasofficial@gmail.com>",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "typescript": "^7.0.2"
+  }
+}

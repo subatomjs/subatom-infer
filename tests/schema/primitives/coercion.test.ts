@@ -1,17 +1,43 @@
 import { describe, it, expect, expectTypeOf } from "vitest";
-import { coerce } from "../../../src/schemas/primitives/coercion.js";
+import {
+  coerce,
+  CoercedStringSchema,
+  CoercedNumberSchema,
+  CoercedBooleanSchema,
+  CoercedBigIntSchema,
+  CoercedDateSchema,
+} from "../../../src/schemas/primitives/coercion.js";
 import { ValidationError } from "../../../src/core/error.js";
 
-describe("Coercion Schemas (coerce)", () => {
+describe("Coercion Schemas (src/schemas/primitives/coercion.ts)", () => {
   // ==========================================
-  // coerce.string()
+  // Direct Class Instantiations & Factory Export
+  // ==========================================
+  describe("Class Constructors & Factory Mapping", () => {
+    it("instantiates classes directly and via coerce factory methods", () => {
+      expect(new CoercedStringSchema()).toBeInstanceOf(CoercedStringSchema);
+      expect(new CoercedNumberSchema()).toBeInstanceOf(CoercedNumberSchema);
+      expect(new CoercedBooleanSchema()).toBeInstanceOf(CoercedBooleanSchema);
+      expect(new CoercedBigIntSchema()).toBeInstanceOf(CoercedBigIntSchema);
+      expect(new CoercedDateSchema()).toBeInstanceOf(CoercedDateSchema);
+
+      expect(coerce.string()).toBeInstanceOf(CoercedStringSchema);
+      expect(coerce.number()).toBeInstanceOf(CoercedNumberSchema);
+      expect(coerce.boolean()).toBeInstanceOf(CoercedBooleanSchema);
+      expect(coerce.bigint()).toBeInstanceOf(CoercedBigIntSchema);
+      expect(coerce.date()).toBeInstanceOf(CoercedDateSchema);
+    });
+  });
+
+  // ==========================================
+  // coerce.string() / CoercedStringSchema
   // ==========================================
   describe("coerce.string()", () => {
     const stringSchema = coerce.string();
 
     it("verifies static TypeScript output and input types", () => {
       expectTypeOf(stringSchema._output).toEqualTypeOf<string>();
-      expectTypeOf(stringSchema._input).toEqualTypeOf<unknown>();
+      expectTypeOf(stringSchema._input).toEqualTypeOf<string>();
     });
 
     it("coerces null and undefined to literal string equivalents", () => {
@@ -19,14 +45,14 @@ describe("Coercion Schemas (coerce)", () => {
       expect(stringSchema.parse(undefined)).toBe("undefined");
     });
 
-    it("coerces serializable objects and arrays to JSON strings", () => {
+    it("coerces objects and arrays to JSON strings", () => {
       expect(stringSchema.parse({ name: "Alice", age: 30 })).toBe(
-        '{"name":"Alice","age":30}',
+        '{"name":"Alice","age":30}'
       );
       expect(stringSchema.parse([1, 2, 3])).toBe("[1,2,3]");
     });
 
-    it("falls back to String(object) when JSON.stringify throws (circular references / BigInt)", () => {
+    it("falls back to String(object) when JSON.stringify throws (circular ref & bigint)", () => {
       const circular: Record<string, unknown> = { key: "value" };
       circular.self = circular;
 
@@ -36,23 +62,25 @@ describe("Coercion Schemas (coerce)", () => {
       expect(stringSchema.parse(bigIntObject)).toBe("[object Object]");
     });
 
-    it("coerces numbers, booleans, bigints, and symbols directly", () => {
+    it("coerces primitives, numbers, booleans, bigints, and symbols directly", () => {
+      expect(stringSchema.parse("already_string")).toBe("already_string");
       expect(stringSchema.parse(12345)).toBe("12345");
       expect(stringSchema.parse(true)).toBe("true");
+      expect(stringSchema.parse(false)).toBe("false");
       expect(stringSchema.parse(100n)).toBe("100");
       expect(stringSchema.parse(Symbol("test"))).toBe("Symbol(test)");
     });
   });
 
   // ==========================================
-  // coerce.number()
+  // coerce.number() / CoercedNumberSchema
   // ==========================================
   describe("coerce.number()", () => {
     const numberSchema = coerce.number();
 
     it("verifies static TypeScript output and input types", () => {
       expectTypeOf(numberSchema._output).toEqualTypeOf<number>();
-      expectTypeOf(numberSchema._input).toEqualTypeOf<unknown>();
+      expectTypeOf(numberSchema._input).toEqualTypeOf<number>();
     });
 
     it("coerces valid numeric strings, booleans, and null to numbers", () => {
@@ -62,39 +90,63 @@ describe("Coercion Schemas (coerce)", () => {
       expect(numberSchema.parse(true)).toBe(1);
       expect(numberSchema.parse(false)).toBe(0);
       expect(numberSchema.parse(null)).toBe(0);
+      expect(numberSchema.parse(100n)).toBe(100);
     });
 
     it("fails when input cannot be coerced to a valid number", () => {
-      const uncoercible: unknown[] = ["invalid_number", undefined, {}, [1, 2]];
+      const uncoercible: unknown[] = [
+        "invalid_number",
+        undefined,
+        {},
+        [1, 2],
+      ];
 
       for (const input of uncoercible) {
         const safe = numberSchema.safeParse(input);
         expect(safe.success).toBe(false);
         if (!safe.success) {
           expect(safe.error).toBeInstanceOf(ValidationError);
-          const issue = safe.error.issues[0];
+          const issue = safe.issues[0];
           expect(issue?.code).toBe("invalid_type");
           if (issue?.code === "invalid_type") {
             expect(issue.expected).toBe("number");
             expect(issue.received).toBe(String(input));
             expect(issue.message).toBe(
-              `Could not coerce "${String(input)}" to number`,
+              `Could not coerce "${String(input)}" to number`
             );
           }
+        }
+      }
+    });
+
+    it("catches errors when Number() throws on Symbol and creates invalid_type issue", () => {
+      const sym = Symbol("test_symbol");
+      const safe = numberSchema.safeParse(sym);
+
+      expect(safe.success).toBe(false);
+      if (!safe.success) {
+        const issue = safe.issues[0];
+        expect(issue?.code).toBe("invalid_type");
+        if (issue?.code === "invalid_type") {
+          expect(issue.expected).toBe("number");
+          expect(issue.received).toBe("Symbol(test_symbol)");
+          expect(issue.message).toBe(
+            'Could not coerce "Symbol(test_symbol)" to number'
+          );
         }
       }
     });
   });
 
   // ==========================================
-  // coerce.boolean()
+  // coerce.boolean() / CoercedBooleanSchema
   // ==========================================
   describe("coerce.boolean()", () => {
     const booleanSchema = coerce.boolean();
 
     it("verifies static TypeScript output and input types", () => {
       expectTypeOf(booleanSchema._output).toEqualTypeOf<boolean>();
-      expectTypeOf(booleanSchema._input).toEqualTypeOf<unknown>();
+      expectTypeOf(booleanSchema._input).toEqualTypeOf<boolean>();
     });
 
     it("coerces specific string values ('false', '0', 'off') with whitespace and casing to false", () => {
@@ -102,17 +154,19 @@ describe("Coercion Schemas (coerce)", () => {
       expect(booleanSchema.parse("FALSE")).toBe(false);
       expect(booleanSchema.parse("  false  ")).toBe(false);
       expect(booleanSchema.parse("0")).toBe(false);
+      expect(booleanSchema.parse("  0  ")).toBe(false);
       expect(booleanSchema.parse("off")).toBe(false);
       expect(booleanSchema.parse("OFF")).toBe(false);
       expect(booleanSchema.parse("  off  ")).toBe(false);
     });
 
-    it("coerces other truthy strings to true", () => {
+    it("coerces other truthy and empty strings properly", () => {
       expect(booleanSchema.parse("true")).toBe(true);
       expect(booleanSchema.parse("1")).toBe(true);
       expect(booleanSchema.parse("yes")).toBe(true);
       expect(booleanSchema.parse("on")).toBe(true);
       expect(booleanSchema.parse("anything")).toBe(true);
+      expect(booleanSchema.parse("")).toBe(false);
     });
 
     it("coerces non-string primitives and objects according to Boolean(input)", () => {
@@ -122,23 +176,25 @@ describe("Coercion Schemas (coerce)", () => {
       expect(booleanSchema.parse(undefined)).toBe(false);
       expect(booleanSchema.parse({})).toBe(true);
       expect(booleanSchema.parse([])).toBe(true);
+      expect(booleanSchema.parse(true)).toBe(true);
+      expect(booleanSchema.parse(false)).toBe(false);
     });
   });
 
   // ==========================================
-  // coerce.bigint()
+  // coerce.bigint() / CoercedBigIntSchema
   // ==========================================
   describe("coerce.bigint()", () => {
     const bigintSchema = coerce.bigint();
 
     it("verifies static TypeScript output and input types", () => {
       expectTypeOf(bigintSchema._output).toEqualTypeOf<bigint>();
-      expectTypeOf(bigintSchema._input).toEqualTypeOf<unknown>();
+      expectTypeOf(bigintSchema._input).toEqualTypeOf<bigint>();
     });
 
     it("coerces valid strings, numbers, booleans, and bigints to bigint", () => {
       expect(bigintSchema.parse("12345678901234567890")).toBe(
-        12345678901234567890n,
+        12345678901234567890n
       );
       expect(bigintSchema.parse("-999")).toBe(-999n);
       expect(bigintSchema.parse(42)).toBe(42n);
@@ -150,7 +206,7 @@ describe("Coercion Schemas (coerce)", () => {
     it("fails when input cannot be coerced to bigint", () => {
       const uncoercibleBigInts: unknown[] = [
         "not_a_bigint",
-        1.5, // Float numbers cannot convert directly to BigInt
+        1.5,
         null,
         undefined,
         {},
@@ -163,13 +219,13 @@ describe("Coercion Schemas (coerce)", () => {
         expect(safe.success).toBe(false);
         if (!safe.success) {
           expect(safe.error).toBeInstanceOf(ValidationError);
-          const issue = safe.error.issues[0];
+          const issue = safe.issues[0];
           expect(issue?.code).toBe("invalid_type");
           if (issue?.code === "invalid_type") {
             expect(issue.expected).toBe("bigint");
             expect(issue.received).toBe(String(input));
             expect(issue.message).toBe(
-              `Could not coerce "${String(input)}" to bigint`,
+              `Could not coerce "${String(input)}" to bigint`
             );
           }
         }
@@ -178,18 +234,18 @@ describe("Coercion Schemas (coerce)", () => {
   });
 
   // ==========================================
-  // coerce.date()
+  // coerce.date() / CoercedDateSchema
   // ==========================================
   describe("coerce.date()", () => {
     const dateSchema = coerce.date();
 
     it("verifies static TypeScript output and input types", () => {
       expectTypeOf(dateSchema._output).toEqualTypeOf<Date>();
-      expectTypeOf(dateSchema._input).toEqualTypeOf<unknown>();
+      expectTypeOf(dateSchema._input).toEqualTypeOf<Date>();
     });
 
     it("coerces ISO strings, timestamps, and Date instances to valid Date", () => {
-      const iso = "2026-08-19T12:00:00.000Z";
+      const iso = "2026-08-20T12:00:00.000Z";
       const parsedIso = dateSchema.parse(iso);
       expect(parsedIso).toBeInstanceOf(Date);
       expect(parsedIso.toISOString()).toBe(iso);
@@ -211,13 +267,13 @@ describe("Coercion Schemas (coerce)", () => {
         expect(safe.success).toBe(false);
         if (!safe.success) {
           expect(safe.error).toBeInstanceOf(ValidationError);
-          const issue = safe.error.issues[0];
+          const issue = safe.issues[0];
           expect(issue?.code).toBe("invalid_type");
           if (issue?.code === "invalid_type") {
             expect(issue.expected).toBe("Date");
             expect(issue.received).toBe(String(input));
             expect(issue.message).toBe(
-              `Could not coerce "${String(input)}" to Date`,
+              `Could not coerce "${String(input)}" to Date`
             );
           }
         }
@@ -237,13 +293,13 @@ describe("Coercion Schemas (coerce)", () => {
         expect(safe.success).toBe(false);
         if (!safe.success) {
           expect(safe.error).toBeInstanceOf(ValidationError);
-          const issue = safe.error.issues[0];
+          const issue = safe.issues[0];
           expect(issue?.code).toBe("invalid_type");
           if (issue?.code === "invalid_type") {
             expect(issue.expected).toBe("Date");
             expect(issue.received).toBe(String(input));
             expect(issue.message).toBe(
-              `Could not coerce "${String(input)}" to Date`,
+              `Could not coerce "${String(input)}" to Date`
             );
           }
         }

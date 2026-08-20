@@ -1,13 +1,19 @@
-import { Schema } from "../../core/schema-base.js";
+import { Schema } from "../../core/schema.js";
 import { makeSuccess, isPromise, type DynamicParseReturnType } from "../../core/result.js";
 import type { ParseContext } from "../../core/context.js";
 
-export class OptionalSchema<TOutput, TInput> extends Schema<TOutput | undefined, TInput | undefined> {
+export class OptionalSchema<TOutput, TInput> extends Schema<
+  TOutput | undefined,
+  TInput | undefined
+> {
   constructor(readonly innerSchema: Schema<TOutput, TInput>) {
     super();
   }
 
-  _parse(input: unknown, ctx: ParseContext): DynamicParseReturnType<TOutput | undefined> {
+  _parse(
+    input: unknown,
+    ctx: ParseContext
+  ): DynamicParseReturnType<TOutput | undefined> {
     if (input === undefined) {
       return makeSuccess(undefined);
     }
@@ -16,5 +22,9 @@ export class OptionalSchema<TOutput, TInput> extends Schema<TOutput | undefined,
       return result.then((res) => (res.success ? makeSuccess(res.data) : res));
     }
     return result;
+  }
+
+  unwrap(): Schema<TOutput, TInput> {
+    return this.innerSchema;
   }
 }

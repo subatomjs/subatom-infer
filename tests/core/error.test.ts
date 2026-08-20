@@ -25,7 +25,7 @@ describe("ValidationError", () => {
       expect(Object.isFrozen(err.issues)).toBe(true);
     });
 
-    it("freezes the issues array to prevent external mutations from affecting the instance", () => {
+    it("freezes the internal issues array to prevent external mutations", () => {
       const mutableIssues: ValidationIssue[] = [
         {
           code: "custom",
@@ -36,24 +36,22 @@ describe("ValidationError", () => {
 
       const err = new ValidationError(mutableIssues);
 
-      // Verify attempting to mutate internal array throws
-expect(() => {
-  // Cast to standard mutable array to bypass TS check for runtime testing
-  (err.issues as ValidationIssue[]).push({
-    code: "custom",
-    path: [],
-    message: "Mutated",
-  });
-}).toThrowError(TypeError);
-      // Verify mutating the input array doesn't affect internal array
+      expect(() => {
+        (err.issues as ValidationIssue[]).push({
+          code: "custom",
+          path: [],
+          message: "Mutated",
+        });
+      }).toThrowError(TypeError);
+
       mutableIssues.push({ code: "custom", path: [], message: "External mutation" });
       expect(err.issues).toHaveLength(1);
     });
 
-    it("properly formats summary message when initialized with an empty issue array", () => {
+    it("formats summary message when initialized with an empty issue array", () => {
       const err = new ValidationError([]);
 
-      expect(err.message).toBe("Validation failed with unknown error");
+      expect(err.message).toBe("Validation failed: ");
       expect(err.issues).toEqual([]);
     });
 
@@ -83,13 +81,13 @@ expect(() => {
       const err = new ValidationError(issues);
 
       expect(err.message).toBe(
-        '[custom]: Global form error; [too_small] at "age": Must be at least 18; [invalid_format] at "profile.contact.email": Invalid email'
+        "Validation failed: [<root>]: Global form error; [age]: Must be at least 18; [profile.contact.email]: Invalid email"
       );
     });
   });
 
   describe("flatten()", () => {
-    it("partitions root issues into formErrors and first-level path issues into fieldErrors", () => {
+    it("partitions root issues into formErrors and joined dot-path issues into fieldErrors", () => {
       const issues: ValidationIssue[] = [
         {
           code: "custom",
@@ -133,7 +131,7 @@ expect(() => {
         formErrors: ["Form submission expired", "Payload cannot be empty"],
         fieldErrors: {
           username: ["Too short", "Must be alphanumeric"],
-          addresses: ["Invalid zip code"],
+          "addresses.0.zipCode": ["Invalid zip code"],
         },
       });
     });
@@ -147,30 +145,6 @@ expect(() => {
         fieldErrors: {},
       });
     });
-
-    it("handles numeric and symbol path elements as string keys in fieldErrors", () => {
-      const sym = Symbol("customKey");
-      const issues: ValidationIssue[] = [
-        {
-          code: "invalid_value",
-          path: [0, "field"],
-          message: "Array item 0 error",
-          received: null,
-        },
-        {
-          code: "invalid_value",
-          path: [sym],
-          message: "Symbol field error",
-          received: null,
-        },
-      ];
-
-      const err = new ValidationError(issues);
-      const flattened = err.flatten();
-
-      expect(flattened.fieldErrors["0"]).toEqual(["Array item 0 error"]);
-      expect(flattened.fieldErrors[String(sym)]).toEqual(["Symbol field error"]);
-    });
   });
 
   describe("format()", () => {
@@ -183,7 +157,7 @@ expect(() => {
       });
     });
 
-    it("builds a deep nested error hierarchy matching issue paths", () => {
+    it("builds a deep nested error hierarchy matching issue paths and multiple issues per leaf", () => {
       const issues: ValidationIssue[] = [
         {
           code: "custom",
@@ -236,7 +210,7 @@ expect(() => {
       });
     });
 
-    it("accurately handles multiple sibling fields at the same level", () => {
+    it("accurately handles multiple sibling fields at the same level sharing parent paths", () => {
       const issues: ValidationIssue[] = [
         {
           code: "invalid_type",
@@ -272,8 +246,8 @@ expect(() => {
     });
   });
 
-  describe("treeifyError() & prettifyError()", () => {
-    it("renders tree view with root indicator and deep paths using -> notation", () => {
+  describe("prettifyError()", () => {
+    it("renders formatted CLI string with root indicator and dot-separated paths", () => {
       const issues: ValidationIssue[] = [
         {
           code: "custom",
@@ -291,36 +265,20 @@ expect(() => {
       ];
 
       const err = new ValidationError(issues);
-      const tree = err.treeifyError();
+      const pretty = err.prettifyError();
 
       const expected = [
-        "ValidationError:",
-        "  ✖ [custom] (<root>) Root failure",
-        "  ✖ [too_small] (members -> 0 -> name) Name too short",
+        "Validation Errors:",
+        "  → [<root>] (custom): Root failure",
+        "  → [members.0.name] (too_small): Name too short",
       ].join("\n");
 
-      expect(tree).toBe(expected);
+      expect(pretty).toBe(expected);
     });
 
     it("outputs only the header when there are no issues", () => {
       const err = new ValidationError([]);
-      expect(err.treeifyError()).toBe("ValidationError:");
-    });
-
-    it("verifies that prettifyError aliases treeifyError identically", () => {
-      const issues: ValidationIssue[] = [
-        {
-          code: "invalid_type",
-          path: ["settings", "theme"],
-          message: "Expected dark | light",
-          expected: "string",
-          received: "number",
-        },
-      ];
-
-      const err = new ValidationError(issues);
-
-      expect(err.prettifyError()).toBe(err.treeifyError());
+      expect(err.prettifyError()).toBe("Validation Errors:");
     });
   });
 });

@@ -1,51 +1,48 @@
 import { describe, it, expect, expectTypeOf } from "vitest";
 import { PrefaultSchema } from "../../../src/schemas/modifiers/prefault.js";
-import { Schema } from "../../../src/core/schema-base.js";
+import { Schema } from "../../../src/core/schema.js";
 import { addIssue, type ParseContext } from "../../../src/core/context.js";
 import {
   makeSuccess,
+  makeFailure,
   type DynamicParseReturnType,
-  type AsyncParseReturnType,
+  type ParseResult,
 } from "../../../src/core/result.js";
 import { ValidationError } from "../../../src/core/error.js";
 
-// --- Test Harness Helper Schemas ---
+// --- Test Harness Concrete Helper Schemas ---
 
 class SyncStringSchema extends Schema<string> {
   _parse(input: unknown, ctx: ParseContext): DynamicParseReturnType<string> {
-    if (typeof input === "string") {
-      return makeSuccess(input);
-    }
+    if (typeof input === "string") return makeSuccess(input);
     addIssue(ctx, {
       code: "invalid_type",
       message: "Expected string",
       expected: "string",
       received: typeof input,
     });
-    return { success: false, issues: ctx.issues };
+    return makeFailure(ctx.issues);
   }
 }
 
 class AsyncNumberSchema extends Schema<number> {
-  async _parse(input: unknown, ctx: ParseContext): AsyncParseReturnType<number> {
+  async _parse(input: unknown, ctx: ParseContext): Promise<ParseResult<number>> {
     await new Promise((resolve) => setTimeout(resolve, 2));
-    if (typeof input === "number") {
-      return makeSuccess(input * 2);
-    }
+    if (typeof input === "number") return makeSuccess(input * 2);
     addIssue(ctx, {
       code: "invalid_type",
       message: "Expected number async",
       expected: "number",
       received: typeof input,
     });
-    return { success: false, issues: ctx.issues };
+    return makeFailure(ctx.issues);
   }
 }
 
 const syncString = new SyncStringSchema();
 const asyncNumber = new AsyncNumberSchema();
 
-describe("PrefaultSchema", () => {
+describe("PrefaultSchema (prefault.ts)", () => {
   describe("Constructor & Type Inference", () => {
     it("stores innerSchema and literal defaultValue correctly", () => {
       const schema = new PrefaultSchema(syncString, "literal_prefault");
@@ -88,7 +85,7 @@ describe("PrefaultSchema", () => {
         expect(safe.success).toBe(false);
         if (!safe.success) {
           expect(safe.error).toBeInstanceOf(ValidationError);
-          const issue = safe.error.issues[0];
+          const issue = safe.issues[0];
           expect(issue?.code).toBe("invalid_type");
           if (issue?.code === "invalid_type") {
             expect(issue.expected).toBe("string");
@@ -98,7 +95,7 @@ describe("PrefaultSchema", () => {
     });
 
     it("validates the default value itself against innerSchema if invalid default is provided", () => {
-      // Cast invalid default value to test innerSchema validation path on undefined
+      // Test the path where the default value itself is invalid for the inner schema
       const invalidDefaultSchema = new PrefaultSchema(
         syncString,
         12345 as unknown as string
@@ -107,7 +104,7 @@ describe("PrefaultSchema", () => {
       expect(safe.success).toBe(false);
       if (!safe.success) {
         expect(safe.error).toBeInstanceOf(ValidationError);
-        const issue = safe.error.issues[0];
+        const issue = safe.issues[0];
         expect(issue?.code).toBe("invalid_type");
         if (issue?.code === "invalid_type") {
           expect(issue.expected).toBe("string");
@@ -169,7 +166,7 @@ describe("PrefaultSchema", () => {
       expect(safe.success).toBe(false);
       if (!safe.success) {
         expect(safe.error).toBeInstanceOf(ValidationError);
-        const issue = safe.error.issues[0];
+        const issue = safe.issues[0];
         expect(issue?.code).toBe("invalid_type");
         expect(issue?.message).toBe("Expected number async");
       }

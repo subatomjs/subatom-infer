@@ -1,4 +1,3 @@
-// src/schemas/modifiers/transform.ts
 import { Schema } from "../../core/schema.js";
 import { addIssue, type ParseContext } from "../../core/context.js";
 import { makeFailure, makeSuccess, isPromise, type DynamicParseReturnType } from "../../core/result.js";
@@ -21,13 +20,21 @@ export class TransformSchema<TOutput, TInput, TNewOutput> extends Schema<TNewOut
           if (!ctx.async) {
             throw new Error("Asynchronous transform executed during synchronous parse.");
           }
-          return transformed.then((res) => makeSuccess(res));
+          return transformed
+            .then((res) => makeSuccess(res))
+            .catch((err: unknown) => {
+              addIssue(ctx, {
+                code: "custom",
+                message: err instanceof Error ? err.message : "Transformer threw an error",
+              });
+              return makeFailure(ctx.issues);
+            });
         }
         return makeSuccess(transformed);
-      } catch (err) {
+      } catch (err: unknown) {
         addIssue(ctx, {
           code: "custom",
-          message: err instanceof Error ? err.message : "Transformer thrown an error",
+          message: err instanceof Error ? err.message : "Transformer threw an error",
         });
         return makeFailure(ctx.issues);
       }

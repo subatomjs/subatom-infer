@@ -1,43 +1,41 @@
-import type { IssuePathElement, ValidationIssue } from "./issue.js";
-
-export type { IssuePathElement };
+import type { IssueData, ValidationIssue } from "./issue.js";
 
 export interface ParseContext {
-  async: boolean;
-  issues: ValidationIssue[];
-  path: readonly IssuePathElement[];
+  readonly async: boolean;
+  readonly path: readonly (string | number)[];
+  readonly issues: ValidationIssue[];
 }
 
-export type IssuePayload = ValidationIssue extends infer T
-  ? T extends ValidationIssue
-    ? Omit<T, "path">
-    : never
-  : never;
-
 export function createParseContext(
-  async: boolean,
-  path: readonly IssuePathElement[] = []
+  isAsync = false,
+  path: readonly (string | number)[] = []
 ): ParseContext {
   return {
-    async,
+    async: isAsync,
+    path,
     issues: [],
-    path: Object.freeze([...path]),
   };
 }
 
 export function nestContext(
   ctx: ParseContext,
-  segment: IssuePathElement
+  segment: string | number
 ): ParseContext {
   return {
-    ...ctx,
-    path: Object.freeze([...ctx.path, segment]),
+    async: ctx.async,
+    path: [...ctx.path, segment],
+    issues: ctx.issues,
   };
 }
 
-export function addIssue(ctx: ParseContext, issue: IssuePayload): void {
-  ctx.issues.push({
-    ...issue,
-    path: ctx.path,
-  } as ValidationIssue);
+export function addIssue(
+  ctx: ParseContext,
+  issueData: IssueData & { path?: readonly (string | number)[] }
+): void {
+  const fullIssue: ValidationIssue = {
+    ...issueData,
+    path: issueData.path ?? ctx.path,
+  } as ValidationIssue;
+
+  ctx.issues.push(fullIssue);
 }

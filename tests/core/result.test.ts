@@ -7,8 +7,8 @@ import {
   isPromise,
   type ParseResult,
   type SafeParseResult,
-  type SyncParseReturnType,
-  type AsyncParseReturnType,
+  type ParseSuccess,
+  type ParseFailure,
   type DynamicParseReturnType,
 } from "../../src/core/result.js";
 
@@ -40,7 +40,7 @@ describe("Parse Result Module", () => {
   });
 
   describe("makeFailure", () => {
-    it("creates a failure result with issues array and freezes the issues", () => {
+    it("creates a failure result containing ValidationError instance and issues list", () => {
       const issues: ValidationIssue[] = [
         {
           code: "invalid_type",
@@ -56,7 +56,9 @@ describe("Parse Result Module", () => {
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(result.issues).toEqual(issues);
-        expect(Object.isFrozen(result.issues)).toBe(true);
+        expect(result.error).toBeInstanceOf(ValidationError);
+        expect(result.error.issues).toEqual(issues);
+        expect(Object.isFrozen(result.error.issues)).toBe(true);
       }
     });
 
@@ -66,22 +68,9 @@ describe("Parse Result Module", () => {
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(result.issues).toEqual([]);
-        expect(Object.isFrozen(result.issues)).toBe(true);
-      }
-    });
-
-    it("prevents runtime mutation of the issues array", () => {
-      const result = makeFailure([]);
-
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(() => {
-          (result.issues as ValidationIssue[]).push({
-            code: "custom",
-            path: [],
-            message: "Illegal mutation",
-          });
-        }).toThrowError(TypeError);
+        expect(result.error).toBeInstanceOf(ValidationError);
+        expect(result.error.issues).toEqual([]);
+        expect(Object.isFrozen(result.error.issues)).toBe(true);
       }
     });
   });
@@ -92,11 +81,12 @@ describe("Parse Result Module", () => {
       expect(isPromise(nativePromise)).toBe(true);
     });
 
-    it("returns true for custom Promise-like (thenable) objects", () => {
-      const thenable = {
+    it("returns true for Promise-like objects with both .then and .catch methods", () => {
+      const thenableAndCatchable = {
         then: (resolve: (val: number) => void) => resolve(1),
+        catch: (reject: (err: unknown) => void) => reject(new Error()),
       };
-      expect(isPromise(thenable)).toBe(true);
+      expect(isPromise(thenableAndCatchable)).toBe(true);
     });
 
     it("returns false for null and undefined", () => {
@@ -112,41 +102,52 @@ describe("Parse Result Module", () => {
       expect(isPromise(100n)).toBe(false);
     });
 
-    it("returns false for plain objects without a 'then' property", () => {
+    it("returns false for plain objects without a 'then' or 'catch' property", () => {
       expect(isPromise({})).toBe(false);
       expect(isPromise({ otherProp: 123 })).toBe(false);
     });
 
-    it("returns false for objects where 'then' is not a function", () => {
-      expect(isPromise({ then: true })).toBe(false);
-      expect(isPromise({ then: "function" })).toBe(false);
-      expect(isPromise({ then: 42 })).toBe(false);
-      expect(isPromise({ then: {} })).toBe(false);
-      expect(isPromise({ then: null })).toBe(false);
+    it("returns false for objects with 'then' method but missing 'catch' method", () => {
+      const onlyThen = {
+        then: (resolve: (val: number) => void) => resolve(1),
+      };
+      expect(isPromise(onlyThen)).toBe(false);
     });
 
-    it("returns false for functions that do not have a then method", () => {
+    it("returns false for objects where 'then' or 'catch' are not functions", () => {
+      expect(isPromise({ then: true, catch: true })).toBe(false);
+      expect(isPromise({ then: () => {}, catch: "not-a-function" })).toBe(false);
+      expect(isPromise({ then: "function", catch: () => {} })).toBe(false);
+      expect(isPromise({ then: 42, catch: null })).toBe(false);
+    });
+
+    it("returns false for functions without a then and catch method", () => {
       const fn = () => {};
       expect(isPromise(fn)).toBe(false);
     });
   });
 
   describe("Type Level Invariants", () => {
-    it("verifies ParseResult and SafeParseResult union discrimination", () => {
+    it("verifies ParseResult, SafeParseResult, and DynamicParseReturnType types", () => {
       type User = { id: string };
 
-      expectTypeOf<ParseResult<User>>().toMatchTypeOf<
-        | { readonly success: true; readonly data: User }
-        | { readonly success: false; readonly issues: readonly ValidationIssue[] }
+      expectTypeOf<ParseSuccess<User>>().toEqualTypeOf<{
+        readonly success: true;
+        readonly data: User;
+      }>();
+
+      expectTypeOf<ParseFailure>().toEqualTypeOf<{
+        readonly success: false;
+        readonly error: ValidationError;
+        readonly issues: readonly ValidationIssue[];
+      }>();
+
+      expectTypeOf<ParseResult<User>>().toEqualTypeOf<
+        ParseSuccess<User> | ParseFailure
       >();
 
-      expectTypeOf<SafeParseResult<User>>().toMatchTypeOf<
-        | { readonly success: true; readonly data: User; readonly error?: never }
-        | { readonly success: false; readonly error: ValidationError; readonly data?: never }
-      >();
+      expectTypeOf<SafeParseResult<User>>().toEqualTypeOf<ParseResult<User>>();
 
-      expectTypeOf<SyncParseReturnType<User>>().toEqualTypeOf<ParseResult<User>>();
-      expectTypeOf<AsyncParseReturnType<User>>().toEqualTypeOf<Promise<ParseResult<User>>>();
       expectTypeOf<DynamicParseReturnType<User>>().toEqualTypeOf<
         ParseResult<User> | Promise<ParseResult<User>>
       >();

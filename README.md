@@ -2,28 +2,21 @@
 
 > Production-grade, high-performance runtime validation, strict schema transformation, and compile-time type inference engine powered by the unified `infer` namespace.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D24.0.0-339933?logo=node.js)](https://nodejs.org)
-[![TypeScript](https://img.shields.io/badge/TypeScript-%3E%3D5.0%20Strict-3178C6?logo=typescript)](https://www.typescriptlang.org/)
-[![Module](https://img.shields.io/badge/Format-Pure%20ESM%20%2F%20CJS-orange)](https://github.com/)
-
 ---
 
 ## 📖 Documentation
 
-[![Documentation](https://img.shields.io/badge/docs-infer.subatomjs.dev-38bdf8?style=for-the-badge&logo=googledocs&logoColor=white)](https://infer.subatomjs.dev/)
-
-
-For complete guides, API references, and interactive examples, visit the [Official Documentation](https://infer.subatomjs.dev/).
+For complete guides, API references, and interactive examples, visit the [Official Documentation](https://infer.subatomjs.dev).
 
 ---
+
 ## ⚡ Highlights & Key Architecture
 
-- **🚀 Dual Pipeline Execution:** Synchronous execution throws when encountering async refinements/transforms; asynchronous pipeline evaluates fully non-blocking.
-- **🛡️ Bidirectional Typing (`Schema<Out, In>`):** Clearly separates runtime input preconditions from validated/transformed output types.
-- **🔒 Immutable AST & Memory Safety:** Zero runtime side-effects, full prototype poisoning protection, and thread-safe schema composition.
-- **🎯 Discriminated Diagnostic AST:** Exact JSON/array paths, key-level issue grouping, and structured error trees (`.flatten()`, `.format()`, `.prettifyError()`).
-- **📦 Zero-Bloat ESM & CJS:** Full dual export compatibility with strict TypeScript declarations.
+* **🚀 Dual Pipeline Execution:** Synchronous execution throws when encountering async refinements/transforms; asynchronous pipeline evaluates fully non-blocking.
+* **🛡️ Bidirectional Typing (`Schema<Out, In>`):** Clearly separates runtime input preconditions from validated/transformed output types.
+* **🔒 Immutable AST & Memory Safety:** Zero runtime side-effects, full prototype poisoning protection, and thread-safe schema composition.
+* **🎯 Discriminated Diagnostic AST:** Exact JSON/array paths, key-level issue grouping, and structured error trees (`.flatten()`, `.format()`, `.prettifyError()`).
+* **📦 Zero-Bloat ESM & CJS:** Full dual export compatibility with strict TypeScript declarations.
 
 ---
 
@@ -37,6 +30,7 @@ pnpm add subatom-infer
 yarn add subatom-infer
 # or
 bun add subatom-infer
+
 ```
 
 ---
@@ -73,6 +67,7 @@ if (result.success) {
 } else {
   console.error("Validation error:", result.error.flatten());
 }
+
 ```
 
 ---
@@ -84,11 +79,11 @@ if (result.success) {
 Every schema instance exposes synchronous and asynchronous parsing methods:
 
 | Method | Return Signature | Description & Behavior |
-| :--- | :--- | :--- |
-| `.parse(input)` | `TOutput` | Synchronous. Throws `ValidationError` on failure or if async nodes exist. |
+| --- | --- | --- |
+| `.parse(input)` | `TOutput` | Synchronous. Throws `ValidationError` on failure or if async pipelines. |
 | `.safeParse(input)` | `SafeParseResult<TOutput>` | Returns `{ success: true, data }` or `{ success: false, error }`. |
-| `.parseAsync(input)` | `Promise<TOutput>` | Asynchronous. Awaits all async transformations, refinements, and sub-schemas. |
-| `.safeParseAsync(input)` / `.spa()` | `Promise<SafeParseResult>` | Non-throwing async promise resolving to a discriminated union. |
+| `.parseAsync(input)` | `Promise<TOutput>` | Asynchronous execution. Awaits all async transformations, refinements, and sub-schemas. |
+| `.safeParseAsync(input)` / `.spa()` | `Promise<SafeParseResult>` | Non-throwing Promise resolving to a strongly typed discriminated union. Alias: `.spa()`. |
 
 ---
 
@@ -111,6 +106,7 @@ infer.unknown();
 infer.never();
 infer.nan();
 infer.literal("ACTIVE");
+
 ```
 
 #### String Format & Rule Modifiers
@@ -143,6 +139,7 @@ infer.string()
   .trim()
   .toLowerCase()
   .toUpperCase();
+
 ```
 
 ---
@@ -154,8 +151,8 @@ infer.string()
 ```typescript
 infer.number()
   .int()          // Integer only
-  .safe()         // Safe IEEE-754 range (Number.MIN_SAFE_INTEGER to MAX_SAFE_INTEGER)
-  .finite()       // Rejects Infinity / -Infinity
+  .safe()         // Safe IEEE-754 range
+  .finite()       // Rejects Infinity
   .positive()     // > 0
   .nonnegative()  // >= 0
   .negative()     // < 0
@@ -167,6 +164,7 @@ infer.number()
   .gt(0)
   .lt(101)
   .multipleOf(5);
+
 ```
 
 #### BigInt Constraints
@@ -180,6 +178,7 @@ infer.bigint()
   .min(100n)
   .max(1000000n)
   .multipleOf(10n);
+
 ```
 
 ---
@@ -193,14 +192,14 @@ const BaseUser = infer.object({
   role: infer.enum(["admin", "user"]),
 });
 
-// Structural Policies
+// Object Policy Modifiers
 const StrictUser   = BaseUser.strict();                 // Rejects unrecognized keys
 const LooseUser    = BaseUser.passthrough();            // Retains unknown keys
 const StrippedUser = BaseUser.strip();                  // Default: strips extra properties
-const CatchallUser = BaseUser.catchall(infer.boolean()); // Validates unknown keys against schema
+const CatchallUser = BaseUser.catchall(infer.boolean()); // Validates unknown keys
 
-// Schema Composition & Shape Utilities
-const ExtendedUser = BaseUser.extend({ email: infer.string().email() });
+// Structural Composition & Transformations
+const ExtendedUser = BaseUser.extend({ email: infer.email() });
 const MergedSchema = BaseUser.merge(infer.object({ traceId: infer.string() }));
 const PickedName   = BaseUser.pick({ name: true });
 const OmittedId    = BaseUser.omit({ id: true });
@@ -208,6 +207,7 @@ const PartialUser  = BaseUser.partial();                // All fields optional
 const RequiredUser = PartialUser.required();            // All fields required
 const DeepOptional = BaseUser.deepPartial();            // Recursively optional
 const UserKeysEnum = BaseUser.keyof();                  // Returns EnumSchema of keys
+
 ```
 
 ---
@@ -232,6 +232,7 @@ const Config = infer.record(
 // Native JavaScript Sets & Maps
 const Roles = infer.set(infer.string()).min(1);
 const Lookup = infer.map(infer.uuid(), infer.boolean());
+
 ```
 
 ---
@@ -239,13 +240,13 @@ const Lookup = infer.map(infer.uuid(), infer.boolean());
 ### 6. Combinators & Special Schemas
 
 ```typescript
-// Tagged / Discriminated Union (O(1) fast branch dispatch)
-const EventSchema = infer.discriminatedUnion("type", [
-  infer.object({ type: infer.literal("click"), x: infer.number(), y: infer.number() }),
-  infer.object({ type: infer.literal("hover"), element: infer.string() }),
+// Tagged / Discriminated Union (O(1) matching)
+const Event = infer.discriminatedUnion("type", [
+  infer.object({ type: infer.literal("click"), x: infer.number() }),
+  infer.object({ type: infer.literal("hover"), element: infer.string() })
 ]);
 
-// Untagged Union & Intersection
+// Union & Intersection
 const StrOrNum = infer.union([infer.string(), infer.number()]);
 const Combined = infer.intersection(SchemaA, SchemaB);
 
@@ -260,13 +261,10 @@ const AsyncStr = infer.promise(infer.string());
 const Upload = infer.file().max(5_000_000).mime("image/png");
 
 // Recursive & Self-Referencing Types
-type Category = { name: string; subcategories?: Category[] };
-const CategorySchema: infer.Schema<Category> = infer.lazy(() =>
-  infer.object({
-    name: infer.string(),
-    subcategories: infer.array(CategorySchema).optional(),
-  })
-);
+const Node = infer.lazy(() => infer.object({
+  next: Node.optional()
+}));
+
 ```
 
 ---
@@ -274,32 +272,28 @@ const CategorySchema: infer.Schema<Category> = infer.lazy(() =>
 ### 7. Modifiers, Pipelines, Refinements & Codecs
 
 ```typescript
-// 1. Modifiers, Defaults & Fallbacks
+// 1. Modifiers & Defaults
 const OptStr       = infer.string().optional();                 // string | undefined
 const NullableNum  = infer.number().nullable();                 // number | null
 const NullishDate  = infer.date().nullish();                    // Date | null | undefined
-const DefaultPort  = infer.number().default(3000);              // Defaults to 3000 if undefined
+const DefaultPort  = infer.number().default(3000);
 const PrefaultVal  = infer.string().prefault("anonymous");
-const SafeValue    = infer.number().catch(0);                   // Fallback value on failure
+const SafeValue    = infer.number().catch(0);
 
-// 2. Transformations & Pipelines
+// 2. Transformation Pipeline & Pipe
 const StrToDate = infer.string().transform((val) => new Date(val));
 const PipedValidation = infer.pipe(
   infer.string().min(2),
   infer.string().email()
 );
 
-// 3. Custom Refinements & Context Diagnostics
+// 3. Refinements & SuperRefine
 const PasswordCheck = infer.object({
   password: infer.string().min(8),
-  confirm: infer.string(),
+  confirm: infer.string()
 }).superRefine((data, ctx) => {
   if (data.password !== data.confirm) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["confirm"],
-      message: "Passwords must match",
-    });
+    ctx.addIssue({ code: "custom", message: "Passwords must match" });
   }
 });
 
@@ -310,13 +304,12 @@ const Base64Codec = infer.codec(
   infer.string().transform((str) => Buffer.from(str, "base64")),
   (buf: Buffer) => buf.toString("base64")
 );
+
 ```
 
 ---
 
-### 8. Primitive Coercion Engine
-
-Subatom Infer provides built-in coercion schemas to handle query strings, form data, and dynamic inputs automatically:
+### 8. Coercion Engine & Error Formatting API
 
 ```typescript
 infer.coerce.string();
@@ -325,33 +318,25 @@ infer.coerce.boolean();
 infer.coerce.bigint();
 infer.coerce.date();
 
-// Example: Coercing request query params
-const parsedCount = infer.coerce.number().parse("42"); // 42 (number)
-const parsedDate = infer.coerce.date().parse("2026-08-19T00:00:00Z"); // Date instance
+// Automatically parses strings
+const parsedNum = infer.coerce.number().parse("42"); // 42 (number)
+
 ```
 
----
-
-### 9. Error Formatting & Diagnostics
-
-When validation fails, `ValidationError` provides rich structural formatting utilities:
+#### Error Tree Formatting
 
 ```typescript
 try {
   UserSchema.parse(badInput);
 } catch (err) {
-  // Flat field & form error dictionary
-  const flatErrors = err.flatten();
-  console.log(flatErrors);
-  // Output: { formErrors: [], fieldErrors: { username: ["Too short"], email: ["Invalid email"] } }
-
-  // Nested hierarchical error tree
-  const formattedTree = err.format();
-  console.log(formattedTree);
-
-  // Clean, ANSI-colored CLI diagnostic output
+  // Form & field error record
+  err.flatten();
+  // Deeply nested issue tree
+  err.format();
+  // Pretty CLI string format
   console.log(err.prettifyError());
 }
+
 ```
 
 ---
@@ -377,11 +362,11 @@ type Product = Infer<typeof ProductSchema>;
 // Input type (pre-transformation input requirement)
 type ProductInput = Input<typeof ProductSchema>;
 // { id: string; price: string | number; createdAt: string; }
+
 ```
 
 ---
 
 ## 📄 License
 
-Distributed under the **MIT License**. See `LICENSE` for more information.
-
+Distributed under the **MIT License**. Generated by Subatom Library Architect Suite.

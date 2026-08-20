@@ -1,15 +1,16 @@
 import { describe, it, expect, expectTypeOf } from "vitest";
 import { OptionalSchema } from "../../../src/schemas/modifiers/optional.js";
-import { Schema } from "../../../src/core/schema-base.js";
+import { Schema } from "../../../src/core/schema.js";
 import { addIssue, type ParseContext } from "../../../src/core/context.js";
 import {
   makeSuccess,
+  makeFailure,
   type DynamicParseReturnType,
-  type AsyncParseReturnType,
+  type ParseResult,
 } from "../../../src/core/result.js";
 import { ValidationError } from "../../../src/core/error.js";
 
-// --- Test Harness Concrete Schemas ---
+// --- Test Harness Concrete Helper Schemas ---
 
 class SyncStringSchema extends Schema<string> {
   _parse(input: unknown, ctx: ParseContext): DynamicParseReturnType<string> {
@@ -22,12 +23,12 @@ class SyncStringSchema extends Schema<string> {
       expected: "string",
       received: typeof input,
     });
-    return { success: false, issues: ctx.issues };
+    return makeFailure(ctx.issues);
   }
 }
 
 class AsyncNumberSchema extends Schema<number> {
-  async _parse(input: unknown, ctx: ParseContext): AsyncParseReturnType<number> {
+  async _parse(input: unknown, ctx: ParseContext): Promise<ParseResult<number>> {
     await new Promise((resolve) => setTimeout(resolve, 2));
     if (typeof input === "number") {
       return makeSuccess(input * 3);
@@ -38,14 +39,14 @@ class AsyncNumberSchema extends Schema<number> {
       expected: "number",
       received: typeof input,
     });
-    return { success: false, issues: ctx.issues };
+    return makeFailure(ctx.issues);
   }
 }
 
 const syncString = new SyncStringSchema();
 const asyncNumber = new AsyncNumberSchema();
 
-describe("OptionalSchema", () => {
+describe("OptionalSchema (optional.ts)", () => {
   describe("Constructor & Type Inference", () => {
     it("stores innerSchema reference properly", () => {
       const schema = new OptionalSchema(syncString);
@@ -81,7 +82,7 @@ describe("OptionalSchema", () => {
         expect(safe.success).toBe(false);
         if (!safe.success) {
           expect(safe.error).toBeInstanceOf(ValidationError);
-          const issue = safe.error.issues[0];
+          const issue = safe.issues[0];
           expect(issue?.code).toBe("invalid_type");
           if (issue?.code === "invalid_type") {
             expect(issue.expected).toBe("string");
@@ -114,7 +115,7 @@ describe("OptionalSchema", () => {
       expect(safe.success).toBe(false);
       if (!safe.success) {
         expect(safe.error).toBeInstanceOf(ValidationError);
-        const issue = safe.error.issues[0];
+        const issue = safe.issues[0];
         expect(issue?.code).toBe("invalid_type");
         expect(issue?.message).toBe("Expected number async");
       }
@@ -122,6 +123,17 @@ describe("OptionalSchema", () => {
 
     it("rejects with ValidationError on failed async parseAsync()", async () => {
       await expect(asyncSchema.parseAsync(false)).rejects.toThrowError(ValidationError);
+    });
+  });
+
+  describe("unwrap()", () => {
+    it("unwraps and returns the original innerSchema", () => {
+      const schema = new OptionalSchema(syncString);
+      const unwrapped = schema.unwrap();
+
+      expect(unwrapped).toBe(syncString);
+      expect(unwrapped.parse("valid")).toBe("valid");
+      expect(() => unwrapped.parse(undefined)).toThrowError(ValidationError);
     });
   });
 });

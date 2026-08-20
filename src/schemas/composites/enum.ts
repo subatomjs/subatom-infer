@@ -1,4 +1,3 @@
-// src/schemas/primitives/enum.ts
 import { Schema } from "../../core/schema.js";
 import { addIssue, type ParseContext } from "../../core/context.js";
 import { makeFailure, makeSuccess, type DynamicParseReturnType } from "../../core/result.js";
@@ -60,14 +59,13 @@ export class NativeEnumSchema<TEnum extends Record<string, string | number>> ext
   TEnum[keyof TEnum],
   TEnum[keyof TEnum]
 > {
-  readonly enumValues: Set<unknown>;
+  readonly enumValues: ReadonlySet<unknown>;
 
   constructor(readonly nativeEnum: TEnum) {
     super();
     const keys = Object.keys(nativeEnum);
-    const numericKeys = new Set(keys.filter((k) => !isNaN(Number(k))));
-    
-    // Filter out reverse mappings: keep keys that are NOT numeric keys
+    const numericKeys = new Set(keys.filter((k) => !Number.isNaN(Number(k))));
+
     const values = keys
       .filter((k) => !numericKeys.has(k))
       .map((k) => nativeEnum[k]);

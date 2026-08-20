@@ -1,11 +1,12 @@
 import { describe, it, expect, expectTypeOf } from "vitest";
 import { RefinementSchema } from "../../../src/schemas/modifiers/refine.js";
-import { Schema } from "../../../src/core/schema-base.js";
+import { Schema } from "../../../src/core/schema.js";
 import { addIssue, type ParseContext } from "../../../src/core/context.js";
 import {
   makeSuccess,
+  makeFailure,
   type DynamicParseReturnType,
-  type AsyncParseReturnType,
+  type ParseResult,
 } from "../../../src/core/result.js";
 import { ValidationError } from "../../../src/core/error.js";
 
@@ -22,12 +23,12 @@ class SyncStringSchema extends Schema<string> {
       expected: "string",
       received: typeof input,
     });
-    return { success: false, issues: ctx.issues };
+    return makeFailure(ctx.issues);
   }
 }
 
 class AsyncNumberSchema extends Schema<number> {
-  async _parse(input: unknown, ctx: ParseContext): AsyncParseReturnType<number> {
+  async _parse(input: unknown, ctx: ParseContext): Promise<ParseResult<number>> {
     await new Promise((resolve) => setTimeout(resolve, 2));
     if (typeof input === "number") {
       return makeSuccess(input * 2);
@@ -38,14 +39,14 @@ class AsyncNumberSchema extends Schema<number> {
       expected: "number",
       received: typeof input,
     });
-    return { success: false, issues: ctx.issues };
+    return makeFailure(ctx.issues);
   }
 }
 
 const syncString = new SyncStringSchema();
 const asyncNumber = new AsyncNumberSchema();
 
-describe("RefinementSchema", () => {
+describe("RefinementSchema (refine.ts)", () => {
   describe("Constructor & Type Inference", () => {
     it("stores innerSchema, predicate, and default error message properly", () => {
       const predicate = (val: string) => val.length > 0;
@@ -87,7 +88,7 @@ describe("RefinementSchema", () => {
       expect(safe.success).toBe(false);
       if (!safe.success) {
         expect(safe.error).toBeInstanceOf(ValidationError);
-        const issue = safe.error.issues[0];
+        const issue = safe.issues[0];
         expect(issue?.code).toBe("custom");
         expect(issue?.message).toBe("Invalid input");
       }
@@ -103,7 +104,7 @@ describe("RefinementSchema", () => {
       const safe = schema.safeParse("invalid-email");
       expect(safe.success).toBe(false);
       if (!safe.success) {
-        expect(safe.error.issues[0]?.message).toBe(
+        expect(safe.issues[0]?.message).toBe(
           "Expected email format, received 'invalid-email'"
         );
       }
@@ -120,7 +121,7 @@ describe("RefinementSchema", () => {
       expect(safe.success).toBe(false);
       expect(refinementCalled).toBe(false);
       if (!safe.success) {
-        const issue = safe.error.issues[0];
+        const issue = safe.issues[0];
         expect(issue?.code).toBe("invalid_type");
         if (issue?.code === "invalid_type") {
           expect(issue.expected).toBe("string");
@@ -130,6 +131,13 @@ describe("RefinementSchema", () => {
   });
 
   describe("Synchronous Inner Schema + Asynchronous Refinement", () => {
+    it("throws an error when async refinement is executed during synchronous parse()", () => {
+      const schema = new RefinementSchema(syncString, async (val) => val === "test");
+      expect(() => schema.parse("test")).toThrowError(
+        "Asynchronous refinement executed during synchronous parse."
+      );
+    });
+
     it("parses valid input when async refinement resolves to true via parseAsync()", async () => {
       const schema = new RefinementSchema(syncString, async (val) => {
         await new Promise((res) => setTimeout(res, 2));
@@ -154,7 +162,7 @@ describe("RefinementSchema", () => {
       expect(safe.success).toBe(false);
       if (!safe.success) {
         expect(safe.error).toBeInstanceOf(ValidationError);
-        expect(safe.error.issues[0]?.message).toBe(
+        expect(safe.issues[0]?.message).toBe(
           "String is too short asynchronously"
         );
       }
@@ -173,7 +181,7 @@ describe("RefinementSchema", () => {
       const safe = await schema.safeParseAsync("admin_123");
       expect(safe.success).toBe(false);
       if (!safe.success) {
-        expect(safe.error.issues[0]?.message).toBe(
+        expect(safe.issues[0]?.message).toBe(
           "Invalid username prefix: admin_123"
         );
       }
@@ -199,7 +207,7 @@ describe("RefinementSchema", () => {
       const safe = await schema.safeParseAsync(11);
       expect(safe.success).toBe(false);
       if (!safe.success) {
-        expect(safe.error.issues[0]?.message).toBe(
+        expect(safe.issues[0]?.message).toBe(
           "Value 22 is not a multiple of 10"
         );
       }
@@ -216,7 +224,7 @@ describe("RefinementSchema", () => {
       expect(safe.success).toBe(false);
       expect(refinementInvoked).toBe(false);
       if (!safe.success) {
-        expect(safe.error.issues[0]?.message).toBe("Expected number async");
+        expect(safe.issues[0]?.message).toBe("Expected number async");
       }
     });
 
@@ -245,7 +253,7 @@ describe("RefinementSchema", () => {
       const safe = await schema.safeParseAsync(10);
       expect(safe.success).toBe(false);
       if (!safe.success) {
-        expect(safe.error.issues[0]?.message).toBe(
+        expect(safe.issues[0]?.message).toBe(
           "Calculated value is below minimum threshold"
         );
       }

@@ -1,7 +1,6 @@
 import { describe, it, expect, expectTypeOf } from "vitest";
 import infer, {
-  z,
-  infer as namedInfer,
+  s,
   Schema,
   ValidationError,
   StringSchema,
@@ -29,43 +28,38 @@ import infer, {
   DiscriminatedUnionSchema,
   IntersectionSchema,
   LazySchema,
+  PreprocessSchema,
+  PipeSchema,
+  BrandSchema,
+  Codec,
   FunctionSchema,
   PromiseSchema,
   FileSchema,
-  OptionalSchema,
-  NullableSchema,
-  DefaultSchema,
-  PrefaultSchema,
-  CatchSchema,
-  PreprocessSchema,
-  PipeSchema,
-  ReadonlySchema,
-  BrandSchema,
-  Codec,
-  RefinementSchema,
-  SuperRefineSchema,
-  TransformSchema,
+  CustomSchema,
   type Infer,
   type Input,
   type Output,
 } from "../src/index.js";
-import { RawShape } from "../src/schemas/composites/object.js";
+import type { RawShape } from "../src/schemas/composites/object.js";
 
-describe("Root Index & infer API Facade", () => {
+describe("Root Index & infer Facade (src/index.ts)", () => {
+  // ==========================================
+  // Exports & Compatibility Aliases
+  // ==========================================
   describe("Exports & Compatibility Aliases", () => {
-    it("exports infer as default, named, and z alias matching identical references", () => {
-      expect(infer).toBe(namedInfer);
-      expect(z).toBe(infer);
+    it("exports default infer and alias s referencing the exact same facade", () => {
+      expect(infer).toBe(s);
       expect(typeof infer).toBe("object");
       expect(typeof infer.string).toBe("function");
     });
 
-    it("exports Schema base and ValidationError classes", () => {
+    it("exports core base classes and error classes", () => {
       expect(Schema).toBeDefined();
       expect(ValidationError).toBeDefined();
+      expect(CustomSchema).toBeDefined();
     });
 
-    it("verifies static Infer, Input, Output type helpers", () => {
+    it("resolves static Infer, Input, and Output generic types correctly", () => {
       const userSchema = infer.object({
         name: infer.string(),
         age: infer.number(),
@@ -81,334 +75,324 @@ describe("Root Index & infer API Facade", () => {
     });
   });
 
-  describe("Primitive Builders", () => {
-    it("instantiates primitive schemas properly", () => {
+  // ==========================================
+  // CustomSchema & infer.custom()
+  // ==========================================
+  describe("CustomSchema & infer.custom()", () => {
+    it("parses valid input synchronously when validator returns true", () => {
+      const customString = infer.custom<string>(
+        (val) => typeof val === "string" && val.length > 2
+      );
+      expect(customString).toBeInstanceOf(CustomSchema);
+      expect(customString.parse("hello")).toBe("hello");
+    });
+
+    it("fails synchronously with default message when validator returns false", () => {
+      const customNum = infer.custom<number>((val) => typeof val === "number" && val > 0);
+      const safe = customNum.safeParse(-1);
+
+      expect(safe.success).toBe(false);
+      if (!safe.success) {
+        expect(safe.error).toBeInstanceOf(ValidationError);
+        expect(safe.issues[0]?.message).toBe("Custom validation failed");
+      }
+    });
+
+    it("fails synchronously with custom error message when provided", () => {
+      const customSchema = infer.custom<string>(
+        (val) => val === "allowed",
+        "Value is strictly forbidden"
+      );
+      const safe = customSchema.safeParse("disallowed");
+
+      expect(safe.success).toBe(false);
+      if (!safe.success) {
+        expect(safe.issues[0]?.message).toBe("Value is strictly forbidden");
+      }
+    });
+
+    it("throws Error when async validator is executed during synchronous parse()", () => {
+      const asyncCustom = infer.custom<string>(async (val) => val === "valid");
+      expect(() => asyncCustom.parse("valid")).toThrowError(
+        "Asynchronous custom validator executed during synchronous parse."
+      );
+    });
+
+    it("parses valid input asynchronously via parseAsync()", async () => {
+      const asyncCustom = infer.custom<string>(async (val) => {
+        await new Promise((res) => setTimeout(res, 2));
+        return val === "async_valid";
+      });
+
+      const res = await asyncCustom.parseAsync("async_valid");
+      expect(res).toBe("async_valid");
+    });
+
+    it("fails asynchronously with custom message via safeParseAsync()", async () => {
+      const asyncCustom = infer.custom<string>(
+        async (val) => {
+          await new Promise((res) => setTimeout(res, 2));
+          return val === "ok";
+        },
+        "Async check rejected"
+      );
+
+      const safe = await asyncCustom.safeParseAsync("bad");
+      expect(safe.success).toBe(false);
+      if (!safe.success) {
+        expect(safe.issues[0]?.message).toBe("Async check rejected");
+      }
+    });
+  });
+
+  // ==========================================
+  // Primitive Factory Builders
+  // ==========================================
+  describe("Primitive Factory Builders", () => {
+    it("instantiates each primitive schema correctly", () => {
       expect(infer.string()).toBeInstanceOf(StringSchema);
       expect(infer.number()).toBeInstanceOf(NumberSchema);
-      expect(infer.boolean()).toBeInstanceOf(BooleanSchema);
       expect(infer.bigint()).toBeInstanceOf(BigIntSchema);
+      expect(infer.boolean()).toBeInstanceOf(BooleanSchema);
       expect(infer.date()).toBeInstanceOf(DateSchema);
-      expect(infer.symbol()).toBeInstanceOf(SymbolSchema);
-      expect(infer.undefined()).toBeInstanceOf(UndefinedSchema);
+      expect(infer.literal("ADMIN")).toBeInstanceOf(LiteralSchema);
       expect(infer.null()).toBeInstanceOf(NullSchema);
+      expect(infer.undefined()).toBeInstanceOf(UndefinedSchema);
       expect(infer.void()).toBeInstanceOf(UndefinedSchema);
       expect(infer.any()).toBeInstanceOf(AnySchema);
       expect(infer.unknown()).toBeInstanceOf(UnknownSchema);
       expect(infer.never()).toBeInstanceOf(NeverSchema);
+      expect(infer.symbol()).toBeInstanceOf(SymbolSchema);
       expect(infer.nan()).toBeInstanceOf(NaNSchema);
-      expect(infer.literal("ADMIN")).toBeInstanceOf(LiteralSchema);
     });
 
     it("validates data through primitive schemas created via infer", () => {
-      expect(infer.string().parse("test")).toBe("test");
-      expect(infer.number().parse(123)).toBe(123);
-      expect(infer.boolean().parse(true)).toBe(true);
-      expect(infer.bigint().parse(50n)).toBe(50n);
+      expect(infer.string().parse("str")).toBe("str");
+      expect(infer.number().parse(42)).toBe(42);
+      expect(infer.bigint().parse(10n)).toBe(10n);
+      expect(infer.boolean().parse(false)).toBe(false);
       expect(infer.void().parse(undefined)).toBeUndefined();
-      expect(infer.literal(42).parse(42)).toBe(42);
+      expect(infer.literal("ACTIVE").parse("ACTIVE")).toBe("ACTIVE");
     });
   });
 
-  describe("String Formats & Shortcuts", () => {
-    it("instantiates string format schemas with default and custom messages", () => {
-      // Default messages
+  // ==========================================
+  // Direct Format Shortcuts
+  // ==========================================
+  describe("Direct Format Shortcuts", () => {
+    it("validates formats with default messages", () => {
       expect(infer.uuid().parse("123e4567-e89b-12d3-a456-426614174000")).toBe(
         "123e4567-e89b-12d3-a456-426614174000"
       );
-      expect(infer.guid().parse("123e4567-e89b-12d3-a456-426614174000")).toBe(
-        "123e4567-e89b-12d3-a456-426614174000"
-      );
-      expect(infer.email().parse("user@domain.com")).toBe("user@domain.com");
-      expect(infer.url().parse("https://test.com")).toBe("https://test.com");
-      expect(infer.httpUrl().parse("http://test.com")).toBe("http://test.com");
-      expect(infer.cuid().parse("cjh0qofyx0000r39yoe6ko13d")).toBe(
-        "cjh0qofyx0000r39yoe6ko13d"
-      );
-      expect(infer.cuid2().parse("a1b2c3d4e5")).toBe("a1b2c3d4e5");
-      expect(infer.ulid().parse("01ARZ3NDEKTSV4RRFFQ69G5FAV")).toBe(
-        "01ARZ3NDEKTSV4RRFFQ69G5FAV"
-      );
-      expect(infer.nanoid().parse("V1StGXR8_Z5jdHi6B-myT")).toBe(
-        "V1StGXR8_Z5jdHi6B-myT"
-      );
-      expect(infer.datetime().parse("2026-08-19T12:00:00.000Z")).toBe(
-        "2026-08-19T12:00:00.000Z"
-      );
-      expect(infer.ipv4().parse("127.0.0.1")).toBe("127.0.0.1");
-      expect(infer.ipv6().parse("2001:0db8:85a3:0000:0000:8a2e:0370:7334")).toBe(
-        "2001:0db8:85a3:0000:0000:8a2e:0370:7334"
-      );
-      expect(infer.hostname().parse("sub.example.com")).toBe("sub.example.com");
+      expect(infer.email().parse("dev@domain.com")).toBe("dev@domain.com");
+    });
 
-      // Custom message branches
-      expect(infer.uuid("Bad UUID").safeParse("invalid").success).toBe(false);
-      expect(infer.guid("Bad GUID").safeParse("invalid").success).toBe(false);
-      expect(infer.email("Bad Email").safeParse("invalid").success).toBe(false);
-      expect(infer.url("Bad URL").safeParse("invalid").success).toBe(false);
-      expect(infer.httpUrl("Bad Web URL").safeParse("ftp://invalid").success).toBe(
-        false
-      );
-      expect(infer.cuid("Bad CUID").safeParse("invalid").success).toBe(false);
-      expect(infer.cuid2("Bad CUID2").safeParse("123").success).toBe(false);
-      expect(infer.ulid("Bad ULID").safeParse("invalid").success).toBe(false);
-      expect(infer.nanoid("Bad NanoID").safeParse("invalid").success).toBe(false);
-      expect(infer.datetime("Bad ISO").safeParse("invalid").success).toBe(false);
-      expect(infer.ipv4("Bad IPv4").safeParse("invalid").success).toBe(false);
-      expect(infer.ipv6("Bad IPv6").safeParse("invalid").success).toBe(false);
-      expect(infer.hostname("Bad Host").safeParse("-bad").success).toBe(false);
+    it("fails with custom error messages when supplied", () => {
+      const badUuid = infer.uuid("Invalid UUID custom").safeParse("invalid");
+      expect(badUuid.success).toBe(false);
+      if (!badUuid.success) {
+        expect(badUuid.issues[0]?.message).toBe("Invalid UUID custom");
+      }
+
+      const badEmail = infer.email("Invalid email custom").safeParse("invalid");
+      expect(badEmail.success).toBe(false);
+      if (!badEmail.success) {
+        expect(badEmail.issues[0]?.message).toBe("Invalid email custom");
+      }
     });
   });
 
+  // ==========================================
+  // Composite Builders
+  // ==========================================
   describe("Composite Builders", () => {
-    it("instantiates ObjectSchemas with different policies", () => {
-      const obj = infer.object({ id: infer.number() });
-      expect(obj).toBeInstanceOf(ObjectSchema);
-      expect(obj.policy).toBe("strip");
+    it("instantiates ObjectSchema with object(), strictObject(), and passthroughObject()", () => {
+      const standardObj = infer.object({ id: infer.number() });
+      expect(standardObj).toBeInstanceOf(ObjectSchema);
+      expect(standardObj.policy).toBe("strip");
 
       const strictObj = infer.strictObject({ id: infer.number() });
       expect(strictObj).toBeInstanceOf(ObjectSchema);
       expect(strictObj.policy).toBe("strict");
 
-      const looseObj = infer.looseObject({ id: infer.number() });
-      expect(looseObj).toBeInstanceOf(ObjectSchema);
-      expect(looseObj.policy).toBe("passthrough");
+      const passObj = infer.passthroughObject({ id: infer.number() });
+      expect(passObj).toBeInstanceOf(ObjectSchema);
+      expect(passObj.policy).toBe("passthrough");
     });
 
-    it("instantiates collection schemas (array, tuple, record, set, map)", () => {
+    it("instantiates collections: array, tuple, record, set, map", () => {
       const arr = infer.array(infer.string());
       expect(arr).toBeInstanceOf(ArraySchema);
       expect(arr.parse(["a", "b"])).toEqual(["a", "b"]);
 
-      const tup = infer.tuple([infer.string(), infer.number()]);
+      const tup = infer.tuple([infer.string(), infer.number()] as const);
       expect(tup).toBeInstanceOf(TupleSchema);
-      expect(tup.parse(["hello", 10])).toEqual(["hello", 10]);
+      expect(tup.parse(["key", 100])).toEqual(["key", 100]);
 
       const rec = infer.record(infer.string(), infer.number());
       expect(rec).toBeInstanceOf(RecordSchema);
-      expect(rec.parse({ a: 1, b: 2 })).toEqual({ a: 1, b: 2 });
+      expect(rec.parse({ x: 10, y: 20 })).toEqual({ x: 10, y: 20 });
 
       const setSchema = infer.set(infer.string());
       expect(setSchema).toBeInstanceOf(SetSchema);
-      expect(setSchema.parse(new Set(["x", "y"]))).toEqual(new Set(["x", "y"]));
+      expect(setSchema.parse(new Set(["a"]))).toEqual(new Set(["a"]));
 
       const mapSchema = infer.map(infer.string(), infer.number());
       expect(mapSchema).toBeInstanceOf(MapSchema);
-      const inputMap = new Map([["key", 100]]);
+      const inputMap = new Map([["count", 1]]);
       expect(mapSchema.parse(inputMap)).toEqual(inputMap);
     });
 
-    it("instantiates enum schemas (enum, nativeEnum)", () => {
-      const roles = infer.enum(["admin", "user"] as const);
+    it("instantiates enum and nativeEnum schemas", () => {
+      const roles = infer.enum(["ADMIN", "USER"] as const);
       expect(roles).toBeInstanceOf(EnumSchema);
-      expect(roles.parse("admin")).toBe("admin");
+      expect(roles.parse("ADMIN")).toBe("ADMIN");
 
-      enum Status {
-        Active = "ACTIVE",
-        Inactive = "INACTIVE",
+      enum Mode {
+        Dev = "DEV",
+        Prod = "PROD",
       }
-      const statusSchema = infer.nativeEnum(Status);
-      expect(statusSchema).toBeInstanceOf(NativeEnumSchema);
-      expect(statusSchema.parse(Status.Active)).toBe(Status.Active);
+      const nativeEnumSchema = infer.nativeEnum(Mode);
+      expect(nativeEnumSchema).toBeInstanceOf(NativeEnumSchema);
+      expect(nativeEnumSchema.parse(Mode.Dev)).toBe(Mode.Dev);
     });
   });
 
+  // ==========================================
+  // Combinator Builders
+  // ==========================================
   describe("Combinator Builders", () => {
-    it("instantiates union, discriminatedUnion, intersection, and lazy schemas", () => {
-      const union = infer.union([infer.string(), infer.number()]);
-      expect(union).toBeInstanceOf(UnionSchema);
-      expect(union.parse(10)).toBe(10);
+    it("instantiates union from array of schemas or rest arguments", () => {
+      const arrayUnion = infer.union([infer.string(), infer.number()] as const);
+      expect(arrayUnion).toBeInstanceOf(UnionSchema);
+      expect(arrayUnion.parse("test")).toBe("test");
+      expect(arrayUnion.parse(10)).toBe(10);
 
-      const circle = infer.object({
-        type: infer.literal("circle"),
-        radius: infer.number(),
-      });
+      const restUnion = infer.union(infer.string(), infer.number(), infer.boolean());
+      expect(restUnion).toBeInstanceOf(UnionSchema);
+      expect(restUnion.parse(true)).toBe(true);
+      expect(restUnion.parse("str")).toBe("str");
+      expect(restUnion.parse(5)).toBe(5);
+    });
+
+it("instantiates discriminatedUnion, intersection, and lazy schemas", () => {
       const square = infer.object({
-        type: infer.literal("square"),
+        kind: infer.literal("square"),
         size: infer.number(),
       });
-      const discUnion = infer.discriminatedUnion("type", [circle, square] as unknown as ObjectSchema<RawShape>[]);
-      expect(discUnion).toBeInstanceOf(DiscriminatedUnionSchema);
-      expect(discUnion.parse({ type: "circle", radius: 5 })).toEqual({
-        type: "circle",
-        radius: 5,
+      const circle = infer.object({
+        kind: infer.literal("circle"),
+        radius: infer.number(),
       });
 
-      const intersection = infer.intersection(
+      const discUnion = infer.discriminatedUnion("kind", [
+        square as any,
+        circle,
+      ]);
+      expect(discUnion).toBeInstanceOf(DiscriminatedUnionSchema);
+      expect(discUnion.parse({ kind: "square", size: 4 })).toEqual({
+        kind: "square",
+        size: 4,
+      });
+
+      const inter = infer.intersection(
         infer.object({ a: infer.string() }),
         infer.object({ b: infer.number() })
       );
-      expect(intersection).toBeInstanceOf(IntersectionSchema);
-      expect(intersection.parse({ a: "test", b: 42 })).toEqual({
-        a: "test",
-        b: 42,
-      });
+      expect(inter).toBeInstanceOf(IntersectionSchema);
+      expect(inter.parse({ a: "test", b: 123 })).toEqual({ a: "test", b: 123 });
 
-      type Node = { value: string; next?: Node };
-      const nodeSchema: Schema<Node> = infer.lazy(() =>
+      type Tree = { value: string; child?: Tree };
+      const treeSchema: Schema<Tree> = infer.lazy(() =>
         infer.object({
           value: infer.string(),
-          next: infer.optional(nodeSchema),
+          child: treeSchema.optional(),
         })
       );
-      expect(nodeSchema).toBeInstanceOf(LazySchema);
-      expect(nodeSchema.parse({ value: "head" })).toEqual({
-        value: "head",
-        next: undefined,
+      expect(treeSchema).toBeInstanceOf(LazySchema);
+      expect(treeSchema.parse({ value: "root" })).toEqual({
+        value: "root",
+        child: undefined,
       });
     });
   });
 
-  describe("Special Type Builders", () => {
-    it("instantiates function schema with default arguments and returns", () => {
-      const defaultFnSchema = infer.function();
-      expect(defaultFnSchema).toBeInstanceOf(FunctionSchema);
+  // ==========================================
+  // Modifiers & Transforms
+  // ==========================================
+  describe("Modifiers & Transforms", () => {
+    it("instantiates preprocess, pipe, brand, and codec schemas", () => {
+      const pre = infer.preprocess((v) => String(v), infer.string());
+      expect(pre).toBeInstanceOf(PreprocessSchema);
+      expect(pre.parse(1234)).toBe("1234");
 
-      const dummyFn = () => "result";
-      const wrapped = defaultFnSchema.parse(dummyFn);
-      expect(typeof wrapped).toBe("function");
-      expect((wrapped as () => string)()).toBe("result");
+      const piped = infer.pipe(
+        infer.string(),
+        infer.preprocess((v) => Number(v), infer.number())
+      );
+      expect(piped).toBeInstanceOf(PipeSchema);
+      expect(piped.parse("42")).toBe(42);
+
+      const branded = infer.brand(infer.string(), "UserId");
+      expect(branded).toBeInstanceOf(BrandSchema);
+      expect(branded.parse("user_1")).toBe("user_1");
+
+      const codecInstance = infer.codec(
+        infer.preprocess((v) => Number(v), infer.number()),
+        (output: number) => String(output)
+      );
+      expect(codecInstance).toBeInstanceOf(Codec);
+      expect(codecInstance.parse("100")).toBe(100);
+      expect(codecInstance.encode(100)).toBe("100");
     });
+  });
 
-    it("instantiates function schema with explicit args and return schema", () => {
-      const customFnSchema = infer.function(
-        infer.tuple([infer.number(), infer.number()]),
+  // ==========================================
+  // Special Type Builders
+  // ==========================================
+  describe("Special Type Builders", () => {
+    it("instantiates function schema with defaults and custom parameters", () => {
+      const defaultFn = infer.function();
+      expect(defaultFn).toBeInstanceOf(FunctionSchema);
+      const wrappedDefault = defaultFn.parse(() => 42);
+      expect(typeof wrappedDefault).toBe("function");
+
+      const mathFn = infer.function(
+        infer.tuple([infer.number(), infer.number()] as const),
         infer.number()
       );
-      expect(customFnSchema).toBeInstanceOf(FunctionSchema);
-
-      const add = (a: unknown, b: unknown) => Number(a) + Number(b);
-      const wrapped = customFnSchema.parse(add);
-      expect(wrapped(2, 3)).toBe(5);
+      expect(mathFn).toBeInstanceOf(FunctionSchema);
+      const add = mathFn.parse((a: number, b: number) => a + b);
+      expect(add(10, 20)).toBe(30);
     });
 
     it("instantiates promise and file schemas", async () => {
-      const promiseSchema = infer.promise(infer.string());
-      expect(promiseSchema).toBeInstanceOf(PromiseSchema);
-      const res = await promiseSchema.parse(Promise.resolve("async_val"));
-      expect(res).toBe("async_val");
+      const prom = infer.promise(infer.string());
+      expect(prom).toBeInstanceOf(PromiseSchema);
+      const parsedProm = await prom.parse(Promise.resolve("hello"));
+      expect(parsedProm).toBe("hello");
 
-      const fileSchema = infer.file();
-      expect(fileSchema).toBeInstanceOf(FileSchema);
-      expect(fileSchema.parse({ size: 100, type: "image/png" })).toEqual({
+      const fileInst = infer.file();
+      expect(fileInst).toBeInstanceOf(FileSchema);
+      expect(fileInst.parse({ size: 100, type: "image/png" })).toEqual({
         size: 100,
         type: "image/png",
       });
     });
   });
 
-  describe("Modifier & Transformation Builders", () => {
-    it("instantiates optional, nullable, and nullish schemas", () => {
-      const opt = infer.optional(infer.string());
-      expect(opt).toBeInstanceOf(OptionalSchema);
-      expect(opt.parse(undefined)).toBeUndefined();
-
-      const nullAble = infer.nullable(infer.string());
-      expect(nullAble).toBeInstanceOf(NullableSchema);
-      expect(nullAble.parse(null)).toBeNull();
-
-      const nullIsh = infer.nullish(infer.string());
-      expect(nullIsh).toBeInstanceOf(NullableSchema);
-      expect(nullIsh.parse(null)).toBeNull();
-      expect(nullIsh.parse(undefined)).toBeUndefined();
-      expect(nullIsh.parse("valid")).toBe("valid");
-    });
-
-    it("instantiates default and prefault schemas", () => {
-      const defaultSchema = infer.default(infer.string(), "default_val");
-      expect(defaultSchema).toBeInstanceOf(DefaultSchema);
-      expect(defaultSchema.parse(undefined)).toBe("default_val");
-
-      const prefaultSchema = infer.prefault(infer.string(), "prefault_val");
-      expect(prefaultSchema).toBeInstanceOf(PrefaultSchema);
-      expect(prefaultSchema.parse(undefined)).toBe("prefault_val");
-    });
-
-    it("instantiates catch, preprocess, pipe, transform, readonly, brand, codec", () => {
-      const catchSchema = infer.catch(infer.string(), "fallback");
-      expect(catchSchema).toBeInstanceOf(CatchSchema);
-      expect(catchSchema.parse("valid")).toBe("valid");
-
-      const preprocessSchema = infer.preprocess(
-        (val) => String(val),
-        infer.string()
-      );
-      expect(preprocessSchema).toBeInstanceOf(PreprocessSchema);
-      expect(preprocessSchema.parse(999)).toBe("999");
-
-      const pipeSchema = infer.pipe(
-        infer.string(),
-        infer.preprocess((v) => Number(v), infer.number())
-      );
-      expect(pipeSchema).toBeInstanceOf(PipeSchema);
-      expect(pipeSchema.parse("50")).toBe(50);
-
-      const transformSchema = infer.transform(infer.string(), (v) => v.length);
-      expect(transformSchema).toBeInstanceOf(TransformSchema);
-      expect(transformSchema.parse("hello")).toBe(5);
-
-      const readonlySchema = infer.readonly(infer.object({ a: infer.string() }));
-      expect(readonlySchema).toBeInstanceOf(ReadonlySchema);
-      const frozenObj = readonlySchema.parse({ a: "test" });
-      expect(Object.isFrozen(frozenObj)).toBe(true);
-
-      const brandSchema = infer.brand(infer.string(), "UserId");
-      expect(brandSchema).toBeInstanceOf(BrandSchema);
-      expect(brandSchema.parse("u1")).toBe("u1");
-
-      const codecSchema = infer.codec(
-        infer.preprocess((v) => Number(v), infer.number()),
-        (output: number) => String(output)
-      );
-      expect(codecSchema).toBeInstanceOf(Codec);
-      expect(codecSchema.parse("100")).toBe(100);
-      expect(codecSchema.encode(100)).toBe("100");
-    });
-
-    it("instantiates refine with default and custom message, and superRefine", () => {
-      // refine with default message
-      const refineDefault = infer.refine(infer.number(), (v) => v > 0);
-      expect(refineDefault).toBeInstanceOf(RefinementSchema);
-      expect(refineDefault.parse(10)).toBe(10);
-      const safeDefault = refineDefault.safeParse(-1);
-      expect(safeDefault.success).toBe(false);
-      if (!safeDefault.success) {
-        expect(safeDefault.error.issues[0]?.message).toBe("Invalid input");
-      }
-
-      // refine with custom message
-      const refineCustom = infer.refine(
-        infer.number(),
-        (v) => v > 0,
-        "Must be positive number"
-      );
-      expect(refineCustom).toBeInstanceOf(RefinementSchema);
-      const safeCustom = refineCustom.safeParse(-5);
-      expect(safeCustom.success).toBe(false);
-      if (!safeCustom.success) {
-        expect(safeCustom.error.issues[0]?.message).toBe("Must be positive number");
-      }
-
-      // superRefine
-      const superRefine = infer.superRefine(infer.string(), (val, ctx) => {
-        if (!val.startsWith("admin_")) {
-          ctx.addIssue({ code: "custom", message: "Prefix missing" });
-        }
-      });
-      expect(superRefine).toBeInstanceOf(SuperRefineSchema);
-      expect(superRefine.parse("admin_alice")).toBe("admin_alice");
-      expect(superRefine.safeParse("user_bob").success).toBe(false);
-    });
-  });
-
-  describe("Coercion Accessor", () => {
+  // ==========================================
+  // Coercion Facade
+  // ==========================================
+  describe("Coercion Facade", () => {
     it("exposes coerce helpers under infer.coerce namespace", () => {
       expect(infer.coerce).toBeDefined();
-      expect(infer.coerce.string().parse(123)).toBe("123");
-      expect(infer.coerce.number().parse("456")).toBe(456);
+      expect(infer.coerce.string().parse(100)).toBe("100");
+      expect(infer.coerce.number().parse("200")).toBe(200);
       expect(infer.coerce.boolean().parse("true")).toBe(true);
-      expect(infer.coerce.bigint().parse("100")).toBe(100n);
+      expect(infer.coerce.bigint().parse("300")).toBe(300n);
       expect(
-        infer.coerce.date().parse("2026-08-19T12:00:00.000Z")
+        infer.coerce.date().parse("2026-08-20T12:00:00.000Z")
       ).toBeInstanceOf(Date);
     });
   });

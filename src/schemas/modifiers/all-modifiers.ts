@@ -1,5 +1,4 @@
-// src/schemas/modifiers/all-modifiers.ts
-import { Schema } from "../../core/schema.js";
+import { Schema, type SchemaReadonly } from "../../core/schema.js";
 import { makeSuccess, isPromise, type DynamicParseReturnType } from "../../core/result.js";
 import type { ParseContext } from "../../core/context.js";
 
@@ -70,41 +69,56 @@ export class PipeSchema<A, B, C> extends Schema<C, A> {
   }
 }
 
-export class ReadonlySchema<TOutput, TInput> extends Schema<Readonly<TOutput>, Readonly<TInput>> {
+export class ReadonlySchema<TOutput, TInput> extends Schema<
+  SchemaReadonly<TOutput>,
+  SchemaReadonly<TInput>
+> {
   constructor(readonly innerSchema: Schema<TOutput, TInput>) {
     super();
   }
 
-  _parse(input: unknown, ctx: ParseContext): DynamicParseReturnType<Readonly<TOutput>> {
+  _parse(
+    input: unknown,
+    ctx: ParseContext
+  ): DynamicParseReturnType<SchemaReadonly<TOutput>> {
     const result = this.innerSchema._parse(input, ctx);
     if (isPromise(result)) {
       return result.then((res) => {
         if (res.success && typeof res.data === "object" && res.data !== null) {
-          return makeSuccess(Object.freeze(res.data) as Readonly<TOutput>);
+          return makeSuccess(Object.freeze(res.data) as SchemaReadonly<TOutput>);
         }
-        return res as DynamicParseReturnType<Readonly<TOutput>>;
+        return res as DynamicParseReturnType<SchemaReadonly<TOutput>>;
       });
     }
     if (result.success && typeof result.data === "object" && result.data !== null) {
-      return makeSuccess(Object.freeze(result.data) as Readonly<TOutput>);
+      return makeSuccess(Object.freeze(result.data) as SchemaReadonly<TOutput>);
     }
-    return result as DynamicParseReturnType<Readonly<TOutput>>;
+    return result as DynamicParseReturnType<SchemaReadonly<TOutput>>;
   }
 }
 
-export const BrandSymbol = Symbol("subatom.brand");
+export const BrandSymbol: unique symbol = Symbol("subatom.brand");
 export type Brand<K, T> = K & { readonly [BrandSymbol]: T };
 
-export class BrandSchema<TOutput, TInput, TBrand extends string | symbol> extends Schema<
-  Brand<TOutput, TBrand>,
-  TInput
-> {
-  constructor(readonly innerSchema: Schema<TOutput, TInput>, readonly brandName: TBrand) {
+export class BrandSchema<
+  TOutput,
+  TInput,
+  TBrand extends string | symbol
+> extends Schema<Brand<TOutput, TBrand>, TInput> {
+  constructor(
+    readonly innerSchema: Schema<TOutput, TInput>,
+    readonly brandName: TBrand
+  ) {
     super();
   }
 
-  _parse(input: unknown, ctx: ParseContext): DynamicParseReturnType<Brand<TOutput, TBrand>> {
-    return this.innerSchema._parse(input, ctx) as DynamicParseReturnType<Brand<TOutput, TBrand>>;
+  _parse(
+    input: unknown,
+    ctx: ParseContext
+  ): DynamicParseReturnType<Brand<TOutput, TBrand>> {
+    return this.innerSchema._parse(input, ctx) as DynamicParseReturnType<
+      Brand<TOutput, TBrand>
+    >;
   }
 }
 

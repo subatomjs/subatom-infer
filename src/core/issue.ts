@@ -1,63 +1,73 @@
-export type IssuePathElement = string | number | symbol;
+export type IssueCode =
+  | "invalid_type"
+  | "invalid_value"
+  | "invalid_format"
+  | "too_small"
+  | "too_big"
+  | "unrecognized_keys"
+  | "invalid_union"
+  | "custom";
 
-export interface BaseIssue {
-  readonly path: readonly IssuePathElement[];
-  readonly message: string;
+export interface BaseValidationIssue {
+  code: IssueCode;
+  path: readonly (string | number)[];
+  message: string;
 }
 
-export interface InvalidTypeIssue extends BaseIssue {
-  readonly code: "invalid_type";
-  readonly expected: string;
-  readonly received: string;
+export interface InvalidTypeIssue extends BaseValidationIssue {
+  code: "invalid_type";
+  expected: string;
+  received: string;
 }
 
-export interface InvalidValueIssue extends BaseIssue {
-  readonly code: "invalid_value";
-  readonly expected?: unknown;
-  readonly received: unknown;
+export interface InvalidValueIssue extends BaseValidationIssue {
+  code: "invalid_value";
+  expected?: unknown;
+  received: unknown;
 }
 
-export interface TooSmallIssue extends BaseIssue {
-  readonly code: "too_small";
-  readonly minimum: number | bigint;
-  readonly inclusive: boolean;
-  readonly origin: "string" | "number" | "bigint" | "array" | "set" | "map" | "date" | "file";
+export interface InvalidFormatIssue extends BaseValidationIssue {
+  code: "invalid_format";
+  format: string;
 }
 
-export interface TooBigIssue extends BaseIssue {
-  readonly code: "too_big";
-  readonly maximum: number | bigint;
-  readonly inclusive: boolean;
-  readonly origin: "string" | "number" | "bigint" | "array" | "set" | "map" | "date" | "file";
+export interface SizeBoundIssue extends BaseValidationIssue {
+  code: "too_small" | "too_big";
+  minimum?: number | bigint | undefined;
+  maximum?: number | bigint | undefined;
+  inclusive: boolean;
+  origin: "string" | "number" | "bigint" | "array" | "set" | "map" | "file";
 }
 
-export interface InvalidFormatIssue extends BaseIssue {
-  readonly code: "invalid_format";
-  readonly format: string;
-  readonly validation?: string;
+export interface UnrecognizedKeysIssue extends BaseValidationIssue {
+  code: "unrecognized_keys";
+  keys: readonly string[];
 }
 
-export interface UnrecognizedKeysIssue extends BaseIssue {
-  readonly code: "unrecognized_keys";
-  readonly keys: readonly string[];
+export interface InvalidUnionIssue extends BaseValidationIssue {
+  code: "invalid_union";
+  unionErrors: readonly import("./error.js").ValidationError[];
 }
 
-export interface InvalidUnionIssue extends BaseIssue {
-  readonly code: "invalid_union";
-  readonly unionErrors: readonly import("./error.js").ValidationError[];
-}
-
-export interface CustomIssue extends BaseIssue {
-  readonly code: "custom";
-  readonly params?: Readonly<Record<string, unknown>>;
+export interface CustomIssue extends BaseValidationIssue {
+  code: "custom";
+  params?: Record<string, unknown>;
 }
 
 export type ValidationIssue =
   | InvalidTypeIssue
   | InvalidValueIssue
-  | TooSmallIssue
-  | TooBigIssue
   | InvalidFormatIssue
+  | SizeBoundIssue
   | UnrecognizedKeysIssue
   | InvalidUnionIssue
   | CustomIssue;
+
+export type IssueData =
+  | Omit<InvalidTypeIssue, "path">
+  | Omit<InvalidValueIssue, "path">
+  | Omit<InvalidFormatIssue, "path">
+  | Omit<SizeBoundIssue, "path">
+  | Omit<UnrecognizedKeysIssue, "path">
+  | Omit<InvalidUnionIssue, "path">
+  | Omit<CustomIssue, "path">;

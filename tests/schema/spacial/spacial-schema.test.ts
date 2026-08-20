@@ -10,8 +10,9 @@ import { Schema } from "../../../src/core/schema.js";
 import { addIssue, type ParseContext } from "../../../src/core/context.js";
 import {
   makeSuccess,
+  makeFailure,
   type DynamicParseReturnType,
-  type AsyncParseReturnType,
+  type ParseResult,
 } from "../../../src/core/result.js";
 import { ValidationError } from "../../../src/core/error.js";
 import { TupleSchema } from "../../../src/schemas/composites/collections.js";
@@ -29,7 +30,7 @@ class SyncStringSchema extends Schema<string> {
       expected: "string",
       received: typeof input,
     });
-    return { success: false, issues: ctx.issues };
+    return makeFailure(ctx.issues);
   }
 }
 
@@ -44,12 +45,12 @@ class SyncNumberSchema extends Schema<number> {
       expected: "number",
       received: typeof input,
     });
-    return { success: false, issues: ctx.issues };
+    return makeFailure(ctx.issues);
   }
 }
 
 class AsyncStringSchema extends Schema<string> {
-  async _parse(input: unknown, ctx: ParseContext): AsyncParseReturnType<string> {
+  async _parse(input: unknown, ctx: ParseContext): Promise<ParseResult<string>> {
     await new Promise((resolve) => setTimeout(resolve, 2));
     if (typeof input === "string") {
       return makeSuccess(input.toUpperCase());
@@ -60,7 +61,7 @@ class AsyncStringSchema extends Schema<string> {
       expected: "string",
       received: typeof input,
     });
-    return { success: false, issues: ctx.issues };
+    return makeFailure(ctx.issues);
   }
 }
 
@@ -68,12 +69,12 @@ const syncString = new SyncStringSchema();
 const syncNumber = new SyncNumberSchema();
 const asyncString = new AsyncStringSchema();
 
-describe("Special Schemas (Function, Promise, File)", () => {
+describe("Special Schemas (spacial-schema.ts)", () => {
   // ==========================================
   // FunctionSchema
   // ==========================================
   describe("FunctionSchema", () => {
-    const argsTuple = new TupleSchema([syncString, syncNumber]);
+    const argsTuple = new TupleSchema([syncString, syncNumber] as const);
     const fnSchema = new FunctionSchema(argsTuple, syncString);
 
     describe("Constructor & Type Inference", () => {
@@ -91,7 +92,8 @@ describe("Special Schemas (Function, Promise, File)", () => {
 
     describe("Validation & Function Execution Wrapper", () => {
       it("parses and wraps a valid target function successfully", () => {
-        const rawFn = (name: unknown, age: unknown) => `${String(name)} is ${String(age)}`;
+        const rawFn = (name: unknown, age: unknown) =>
+          `${String(name)} is ${String(age)}`;
         const wrapped = fnSchema.parse(rawFn);
 
         expect(typeof wrapped).toBe("function");
@@ -106,7 +108,7 @@ describe("Special Schemas (Function, Promise, File)", () => {
           expect(safe.success).toBe(false);
           if (!safe.success) {
             expect(safe.error).toBeInstanceOf(ValidationError);
-            const issue = safe.error.issues[0];
+            const issue = safe.issues[0];
             expect(issue?.code).toBe("invalid_type");
             if (issue?.code === "invalid_type") {
               expect(issue.expected).toBe("function");
@@ -118,11 +120,12 @@ describe("Special Schemas (Function, Promise, File)", () => {
       });
 
       it("throws ValidationError when wrapped function is called with invalid arguments", () => {
-        const rawFn = (name: unknown, age: unknown) => `${String(name)} is ${String(age)}`;
+        const rawFn = (name: unknown, age: unknown) =>
+          `${String(name)} is ${String(age)}`;
         const wrapped = fnSchema.parse(rawFn);
 
         expect(() => {
-          // @ts-expect-error Testing invalid runtime argument types
+          // @ts-expect-error Testing runtime parameter rejection with invalid argument types
           wrapped(12345, "invalid-age");
         }).toThrowError(ValidationError);
       });
@@ -182,6 +185,12 @@ describe("Special Schemas (Function, Promise, File)", () => {
       });
     });
 
+    describe("unwrap()", () => {
+      it("returns the underlying schema via unwrap()", () => {
+        expect(promiseStringSchema.unwrap()).toBe(asyncString);
+      });
+    });
+
     describe("Validation & Resolution Wrapper", () => {
       it("parses a valid Promise and unwraps through unwrapSchema successfully", async () => {
         const inputPromise = Promise.resolve("hello promise");
@@ -208,7 +217,7 @@ describe("Special Schemas (Function, Promise, File)", () => {
           expect(safe.success).toBe(false);
           if (!safe.success) {
             expect(safe.error).toBeInstanceOf(ValidationError);
-            const issue = safe.error.issues[0];
+            const issue = safe.issues[0];
             expect(issue?.code).toBe("invalid_type");
             if (issue?.code === "invalid_type") {
               expect(issue.expected).toBe("Promise");
@@ -235,19 +244,21 @@ describe("Special Schemas (Function, Promise, File)", () => {
     const baseFileSchema = new FileSchema();
 
     describe("Constructor & Type Inference", () => {
-      it("initializes with an empty checks array by default", () => {
+      it("initializes with an empty checks array by default and freezes it", () => {
         expect(baseFileSchema.checks).toEqual([]);
+        expect(Object.isFrozen(baseFileSchema.checks)).toBe(true);
       });
 
-      it("stores custom checks array when provided directly", () => {
+      it("stores custom checks array when provided directly and freezes it", () => {
         const customCheck: FileCheck = {
           kind: "custom_check",
-          validate: (f) => f.size > 0,
+          validate: (f: FileValue) => f.size > 0,
           message: "File must not be empty",
         };
         const schema = new FileSchema([customCheck]);
         expect(schema.checks).toHaveLength(1);
         expect(schema.checks[0]).toBe(customCheck);
+        expect(Object.isFrozen(schema.checks)).toBe(true);
       });
 
       it("verifies static TypeScript output and input types", () => {
@@ -272,12 +283,12 @@ describe("Special Schemas (Function, Promise, File)", () => {
         expect(safe.success).toBe(false);
         if (!safe.success) {
           expect(safe.error).toBeInstanceOf(ValidationError);
-          const issue = safe.error.issues[0];
+          const issue = safe.issues[0];
           expect(issue?.code).toBe("invalid_type");
           if (issue?.code === "invalid_type") {
             expect(issue.expected).toBe("File | Blob");
             expect(issue.received).toBe("null");
-            expect(issue.message).toBe("Expected File or Blob instance");
+            expect(issue.message).toBe("Expected File or Blob-like object");
           }
         }
       });
@@ -289,19 +300,20 @@ describe("Special Schemas (Function, Promise, File)", () => {
           true,
           undefined,
           {},
-          { size: 100 }, // missing type
-          { type: "image/png" }, // missing size
+          { size: 100 },
+          { type: "image/png" },
         ];
 
         for (const input of invalidObjects) {
           const safe = baseFileSchema.safeParse(input);
           expect(safe.success).toBe(false);
           if (!safe.success) {
-            const issue = safe.error.issues[0];
+            const issue = safe.issues[0];
             expect(issue?.code).toBe("invalid_type");
             if (issue?.code === "invalid_type") {
               expect(issue.expected).toBe("File | Blob");
               expect(issue.received).toBe(typeof input);
+              expect(issue.message).toBe("Expected File or Blob-like object");
             }
           }
         }
@@ -328,10 +340,12 @@ describe("Special Schemas (Function, Promise, File)", () => {
 
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          const issue = safe.error.issues[0];
-          expect(issue?.code).toBe("invalid_value");
-          if (issue?.code === "invalid_value") {
-            expect(issue.received).toEqual(smallFile);
+          const issue = safe.issues[0];
+          expect(issue?.code).toBe("too_small");
+          if (issue?.code === "too_small") {
+            expect(issue.minimum).toBe(500);
+            expect(issue.inclusive).toBe(true);
+            expect(issue.origin).toBe("file");
             expect(issue.message).toBe("File must be >= 500 bytes");
           }
         }
@@ -343,7 +357,7 @@ describe("Special Schemas (Function, Promise, File)", () => {
 
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          expect(safe.error.issues[0]?.message).toBe("File upload is too small");
+          expect(safe.issues[0]?.message).toBe("File upload is too small");
         }
       });
     });
@@ -368,10 +382,12 @@ describe("Special Schemas (Function, Promise, File)", () => {
 
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          const issue = safe.error.issues[0];
-          expect(issue?.code).toBe("invalid_value");
-          if (issue?.code === "invalid_value") {
-            expect(issue.received).toEqual(largeFile);
+          const issue = safe.issues[0];
+          expect(issue?.code).toBe("too_big");
+          if (issue?.code === "too_big") {
+            expect(issue.maximum).toBe(1024);
+            expect(issue.inclusive).toBe(true);
+            expect(issue.origin).toBe("file");
             expect(issue.message).toBe("File must be <= 1024 bytes");
           }
         }
@@ -383,7 +399,7 @@ describe("Special Schemas (Function, Promise, File)", () => {
 
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          expect(safe.error.issues[0]?.message).toBe("File upload exceeds maximum 2KB limit");
+          expect(safe.issues[0]?.message).toBe("File upload exceeds maximum 2KB limit");
         }
       });
     });
@@ -399,10 +415,10 @@ describe("Special Schemas (Function, Promise, File)", () => {
         const safe = schema.safeParse({ size: 100, type: "image/png" });
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          const issue = safe.error.issues[0];
+          const issue = safe.issues[0];
           expect(issue?.code).toBe("invalid_value");
           if (issue?.code === "invalid_value") {
-            expect(issue.message).toBe("MIME type must be image/jpeg");
+            expect(issue.message).toBe("MIME type must be one of: image/jpeg");
           }
         }
       });
@@ -422,8 +438,8 @@ describe("Special Schemas (Function, Promise, File)", () => {
         const safe = schema.safeParse({ size: 100, type: "image/gif" });
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          expect(safe.error.issues[0]?.message).toBe(
-            "MIME type must be image/png, image/webp"
+          expect(safe.issues[0]?.message).toBe(
+            "MIME type must be one of: image/png, image/webp"
           );
         }
       });
@@ -434,7 +450,32 @@ describe("Special Schemas (Function, Promise, File)", () => {
 
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          expect(safe.error.issues[0]?.message).toBe("Only PDF documents allowed");
+          expect(safe.issues[0]?.message).toBe("Only PDF documents allowed");
+        }
+      });
+    });
+
+    describe("Custom File Checks & Fallbacks", () => {
+      it("handles custom check kinds in _parse fallback branch", () => {
+        const customCheckSchema = new FileSchema([
+          {
+            kind: "must_have_name",
+            validate: (f: FileValue) => Boolean(f.name),
+            message: "File must have a filename",
+          },
+        ]);
+
+        const unnamedFile: FileValue = { size: 100, type: "text/plain" };
+        const safe = customCheckSchema.safeParse(unnamedFile);
+
+        expect(safe.success).toBe(false);
+        if (!safe.success) {
+          const issue = safe.issues[0];
+          expect(issue?.code).toBe("invalid_value");
+          if (issue?.code === "invalid_value") {
+            expect(issue.received).toEqual(unnamedFile);
+            expect(issue.message).toBe("File must have a filename");
+          }
         }
       });
     });
@@ -446,15 +487,18 @@ describe("Special Schemas (Function, Promise, File)", () => {
           .max(5000)
           .mime("application/json");
 
-        // Size 50 violates min(1000), MIME text/plain violates application/json
         const badFile: FileValue = { size: 50, type: "text/plain" };
         const safe = schema.safeParse(badFile);
 
         expect(safe.success).toBe(false);
         if (!safe.success) {
-          expect(safe.error.issues).toHaveLength(2);
-          expect(safe.error.issues[0]?.message).toBe("File must be >= 1000 bytes");
-          expect(safe.error.issues[1]?.message).toBe("MIME type must be application/json");
+          expect(safe.issues).toHaveLength(2);
+          expect(safe.issues[0]?.code).toBe("too_small");
+          expect(safe.issues[0]?.message).toBe("File must be >= 1000 bytes");
+          expect(safe.issues[1]?.code).toBe("invalid_value");
+          expect(safe.issues[1]?.message).toBe(
+            "MIME type must be one of: application/json"
+          );
         }
       });
 
