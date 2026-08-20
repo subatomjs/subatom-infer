@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" class="scroll-smooth">
+<html lang="en" class="scroll-smooth dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -9,17 +9,18 @@
     <link
       rel="icon"
       type="image/png"
-      href="https://res.cloudinary.com/drdfur81n/image/upload/v1786723815/SubAtom_short_logo_a3aa59.png"
+      href="https://res.cloudinary.com/drdfur81n/image/upload/v1787204583/subatom_short_logo_cglxqy.png"
     />
     <link
       rel="apple-touch-icon"
-      href="https://res.cloudinary.com/drdfur81n/image/upload/v1786723815/SubAtom_short_logo_a3aa59.png"
+      href="https://res.cloudinary.com/drdfur81n/image/upload/v1787204583/subatom_short_logo_cglxqy.png"
     />
 
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
+        darkMode: "class",
         theme: {
           extend: {
             fontFamily: {
@@ -58,55 +59,39 @@
     />
 
     <style>
-      @page {
-        size: letter;
-        margin: 15mm;
-        @bottom-right {
-          content: "Page " counter(page) " of " counter(pages);
-          font-size: 8pt;
-          font-family: "Inter", sans-serif;
-          color: #94a3b8;
-        }
-        @bottom-left {
-          content: "Subatom Infer — Developer Specification";
-          font-size: 8pt;
-          font-family: "Inter", sans-serif;
-          color: #94a3b8;
-        }
-      }
-
-      .page-break {
-        page-break-before: always;
-      }
-
-      .no-break {
-        page-break-inside: avoid;
-      }
-
       pre code,
       .code-font {
         font-family: "JetBrains Mono", monospace;
       }
 
-      /* Custom scrollbars for code boxes */
+      /* Custom scrollbars */
       pre::-webkit-scrollbar,
       .overflow-x-auto::-webkit-scrollbar {
         height: 6px;
       }
+      .dark pre::-webkit-scrollbar-track,
+      .dark .overflow-x-auto::-webkit-scrollbar-track {
+        background: #090d16;
+      }
+      .dark pre::-webkit-scrollbar-thumb,
+      .dark .overflow-x-auto::-webkit-scrollbar-thumb {
+        background: #1e293b;
+        border-radius: 4px;
+      }
       pre::-webkit-scrollbar-track,
       .overflow-x-auto::-webkit-scrollbar-track {
-        background: #0f172a;
+        background: #f1f5f9;
       }
       pre::-webkit-scrollbar-thumb,
       .overflow-x-auto::-webkit-scrollbar-thumb {
-        background: #334155;
+        background: #cbd5e1;
         border-radius: 4px;
       }
     </style>
   </head>
 
   <body
-    class="bg-slate-900 text-slate-100 font-sans antialiased text-[13px] leading-relaxed selection:bg-brand-500 selection:text-white min-h-screen"
+    class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 font-sans antialiased text-[13px] leading-relaxed selection:bg-brand-500 selection:text-white min-h-screen transition-colors duration-200"
   >
     <!-- Background subtle gradient glow -->
     <div class="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
@@ -118,566 +103,781 @@
       ></div>
     </div>
 
-    <div class="max-w-5xl mx-auto px-4 py-8 sm:px-6 md:px-10 md:py-12 space-y-10">
-      <!-- HEADER / HERO SECTION -->
-      <header
-        class="border-b border-slate-800 pb-8 no-break bg-slate-900/60 backdrop-blur-md rounded-2xl p-6 sm:p-8 border border-slate-800/80 shadow-glow"
-      >
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-slate-800">
-          <div class="flex items-center gap-4">
-            <!-- Main Brand Logo with fallback -->
-            <img
-              src="https://res.cloudinary.com/drdfur81n/image/upload/v1786723813/SubAtom_no_background_lbmgvu.png"
-              alt="SubAtom"
-              class="h-9 sm:h-11 w-auto object-contain drop-shadow"
+    <!-- STICKY TOP NAVBAR -->
+    <header class="sticky top-0 z-40 w-full border-b border-slate-200 dark:border-slate-800/80 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
+        <div class="flex items-center gap-4">
+          <!-- Light Mode Navbar Logo -->
+          <img
+            src="https://res.cloudinary.com/drdfur81n/image/upload/v1787205050/subatom_lite_tpaiuf.png"
+            alt="SubAtom"
+            class="h-8 sm:h-9 w-auto object-contain drop-shadow dark:hidden"
+          />
+          <!-- Dark Mode Navbar Logo -->
+          <img
+            src="https://res.cloudinary.com/drdfur81n/image/upload/v1787205861/subatom_dark_frbair.png"
+            alt="SubAtom"
+            class="h-8 sm:h-9 w-auto object-contain drop-shadow hidden dark:block"
+          />
+          <span class="hidden sm:inline-flex items-center gap-1.5 bg-brand-50 dark:bg-brand-950/80 text-brand-700 dark:text-brand-300 px-3 py-0.5 rounded-full border border-brand-200 dark:border-brand-500/30 text-xs font-mono font-medium">
+            <span class="w-2 h-2 rounded-full bg-brand-500 animate-pulse"></span>
+            subatom-infer
+          </span>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <!-- Search input -->
+          <div class="relative hidden sm:block w-48 md:w-64">
+            <input
+              id="docSearch"
+              type="text"
+              placeholder="Search docs (Ctrl+K)..."
+              class="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:border-brand-500 transition"
+              oninput="filterSections(this.value)"
             />
-            <div class="h-6 w-px bg-slate-700 hidden sm:block"></div>
-            <span
-              class="inline-flex items-center gap-1.5 bg-brand-950/80 text-brand-300 px-3 py-1 rounded-full border border-brand-500/30 text-xs font-mono font-medium"
+          </div>
+
+          <!-- Light/Dark Mode Switcher -->
+          <button
+            onclick="toggleTheme()"
+            class="p-2 rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-600 dark:text-slate-400 transition"
+            aria-label="Toggle Theme"
+          >
+            <svg id="sunIcon" class="w-4 h-4 hidden dark:block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+            <svg id="moonIcon" class="w-4 h-4 block dark:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex gap-8 py-8">
+      <!-- SIDEBAR NAVIGATION -->
+      <aside class="hidden lg:block w-56 shrink-0 sticky top-24 h-[calc(100vh-8rem)] overflow-y-auto pr-4 text-xs">
+        <div class="font-semibold text-slate-900 dark:text-white uppercase tracking-wider text-[11px] mb-3">Overview</div>
+        <ul class="space-y-1.5 border-l border-slate-200 dark:border-slate-800 pl-3 mb-6">
+          <li><a href="#installation" class="text-slate-600 dark:text-slate-400 hover:text-brand-500 dark:hover:text-brand-400 block transition">Installation</a></li>
+          <li><a href="#architecture" class="text-slate-600 dark:text-slate-400 hover:text-brand-500 dark:hover:text-brand-400 block transition">Architecture</a></li>
+        </ul>
+
+        <div class="font-semibold text-slate-900 dark:text-white uppercase tracking-wider text-[11px] mb-3">Core Reference</div>
+        <ul class="space-y-1.5 border-l border-slate-200 dark:border-slate-800 pl-3 mb-6">
+          <li><a href="#section-1" class="text-slate-600 dark:text-slate-400 hover:text-brand-500 dark:hover:text-brand-400 block transition">1. Parsing & Execution</a></li>
+          <li><a href="#section-2" class="text-slate-600 dark:text-slate-400 hover:text-brand-500 dark:hover:text-brand-400 block transition">2. Primitives & Strings</a></li>
+          <li><a href="#section-3" class="text-slate-600 dark:text-slate-400 hover:text-brand-500 dark:hover:text-brand-400 block transition">3. Numbers & BigInt</a></li>
+          <li><a href="#section-4" class="text-slate-600 dark:text-slate-400 hover:text-brand-500 dark:hover:text-brand-400 block transition">4. Objects & Policies</a></li>
+          <li><a href="#section-5" class="text-slate-600 dark:text-slate-400 hover:text-brand-500 dark:hover:text-brand-400 block transition">5. Collections</a></li>
+          <li><a href="#section-6" class="text-slate-600 dark:text-slate-400 hover:text-brand-500 dark:hover:text-brand-400 block transition">6. Combinators & Specials</a></li>
+          <li><a href="#section-7" class="text-slate-600 dark:text-slate-400 hover:text-brand-500 dark:hover:text-brand-400 block transition">7. Modifiers & Pipelines</a></li>
+          <li><a href="#section-8" class="text-slate-600 dark:text-slate-400 hover:text-brand-500 dark:hover:text-brand-400 block transition">8. Coercion & Errors</a></li>
+        </ul>
+      </aside>
+
+      <!-- MAIN CONTENT AREA -->
+      <main class="flex-1 min-w-0 space-y-10">
+        <!-- HERO / HEADER SECTION -->
+        <header
+          id="architecture"
+          class="doc-section bg-white dark:bg-slate-900/60 backdrop-blur-md rounded-2xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800/80 shadow-sm dark:shadow-glow"
+        >
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-slate-200 dark:border-slate-800">
+            <div class="flex items-center gap-4">
+              <!-- Light Mode Hero Logo -->
+              <img
+                src="https://res.cloudinary.com/drdfur81n/image/upload/v1787205050/subatom_lite_tpaiuf.png"
+                alt="SubAtom"
+                class="h-9 sm:h-11 w-auto object-contain drop-shadow dark:hidden"
+              />
+              <!-- Dark Mode Hero Logo -->
+              <img
+                src="https://res.cloudinary.com/drdfur81n/image/upload/v1787205861/subatom_dark_frbair.png"
+                alt="SubAtom"
+                class="h-9 sm:h-11 w-auto object-contain drop-shadow hidden dark:block"
+              />
+              <div class="h-6 w-px bg-slate-300 dark:bg-slate-700 hidden sm:block"></div>
+              <span
+                class="inline-flex items-center gap-1.5 bg-brand-50 dark:bg-brand-950/80 text-brand-700 dark:text-brand-300 px-3 py-1 rounded-full border border-brand-200 dark:border-brand-500/30 text-xs font-mono font-medium"
+              >
+                <span class="w-2 h-2 rounded-full bg-brand-500 animate-pulse"></span>
+                subatom-infer
+              </span>
+            </div>
+
+            <div
+              class="flex flex-wrap items-center gap-2 sm:gap-3 font-mono text-[11px] text-slate-600 dark:text-slate-400"
             >
-              <span class="w-2 h-2 rounded-full bg-brand-400 animate-pulse"></span>
-              subatom-infer
+              <span class="bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 px-2.5 py-1 rounded-md">Node.js &gt;= 18 LTS</span>
+              <span class="bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 px-2.5 py-1 rounded-md">TypeScript &gt;= 5.0</span>
+              <span class="bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50 px-2.5 py-1 rounded-md">Pure ESM / CJS</span>
+            </div>
+          </div>
+
+          <div class="mt-6 space-y-3">
+            <h1
+              class="text-2xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-tight"
+            >
+              Subatom Infer
+              <span class="text-brand-600 dark:text-brand-400 font-light block sm:inline">Reference Manual</span>
+            </h1>
+            <p class="text-slate-600 dark:text-slate-400 text-sm max-w-3xl leading-relaxed">
+              High-performance runtime validation, strict schema transformation, and compile-time type inference engine powered by the
+              <code class="text-brand-600 dark:text-brand-300 bg-brand-50 dark:bg-brand-950/60 border border-brand-200 dark:border-brand-800/50 px-1.5 py-0.5 rounded font-mono font-medium">infer</code>
+              namespace.
+            </p>
+          </div>
+
+          <!-- Architecture Highlight Banner -->
+          <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div class="bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/90 p-3.5 rounded-xl shadow-sm hover:border-brand-500/50 transition">
+              <div class="text-[10px] font-bold text-brand-600 dark:text-brand-400 uppercase tracking-wider">Architecture</div>
+              <div class="text-sm font-semibold text-slate-800 dark:text-slate-100 mt-1">Dual Pipeline</div>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-snug">Sync throws on async; Async evaluates non-blocking.</p>
+            </div>
+            <div class="bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/90 p-3.5 rounded-xl shadow-sm hover:border-brand-500/50 transition">
+              <div class="text-[10px] font-bold text-brand-600 dark:text-brand-400 uppercase tracking-wider">Typing</div>
+              <div class="text-sm font-semibold text-slate-800 dark:text-slate-100 mt-1 code-font text-xs">Schema&lt;Out, In&gt;</div>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-snug">Separates input preconditions from validated output.</p>
+            </div>
+            <div class="bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/90 p-3.5 rounded-xl shadow-sm hover:border-brand-500/50 transition">
+              <div class="text-[10px] font-bold text-brand-600 dark:text-brand-400 uppercase tracking-wider">State</div>
+              <div class="text-sm font-semibold text-slate-800 dark:text-slate-100 mt-1">Immutable AST</div>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-snug">Zero side-effects, prototype poisoning protection.</p>
+            </div>
+            <div class="bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/90 p-3.5 rounded-xl shadow-sm hover:border-brand-500/50 transition">
+              <div class="text-[10px] font-bold text-brand-600 dark:text-brand-400 uppercase tracking-wider">Diagnostics</div>
+              <div class="text-sm font-semibold text-slate-800 dark:text-slate-100 mt-1">Discriminated AST</div>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-snug">Exact JSON paths, key-level issue grouping.</p>
+            </div>
+          </div>
+        </header>
+
+        <!-- INSTALLATION SECTION -->
+        <section id="installation" class="doc-section scroll-mt-24 space-y-4">
+          <div class="flex items-center gap-3">
+            <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-brand-600 text-white font-bold text-xs shadow-md shadow-brand-500/20">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
             </span>
+            <h2 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">
+              Installation
+            </h2>
           </div>
 
-          <div
-            class="flex flex-wrap items-center gap-2 sm:gap-3 font-mono text-[11px] text-slate-400"
-          >
-            <span class="bg-slate-800/80 border border-slate-700/60 px-2.5 py-1 rounded-md">Node.js &gt;= 18 LTS</span>
-            <span class="bg-slate-800/80 border border-slate-700/60 px-2.5 py-1 rounded-md">TypeScript &gt;= 5.0</span>
-            <span class="bg-emerald-950/60 text-emerald-400 border border-emerald-800/50 px-2.5 py-1 rounded-md">Pure ESM / CJS</span>
+          <div class="border border-slate-200 dark:border-slate-800 bg-slate-100/70 dark:bg-slate-950/70 rounded-xl overflow-hidden shadow-sm">
+            <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 px-4 pt-2">
+              <div class="flex gap-2 text-xs font-mono">
+                <button onclick="setPkgManager('npm')" class="pkg-tab active-pkg border-b-2 border-brand-500 text-brand-600 dark:text-brand-400 px-3 py-1.5 font-medium">npm</button>
+                <button onclick="setPkgManager('pnpm')" class="pkg-tab text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 px-3 py-1.5">pnpm</button>
+                <button onclick="setPkgManager('yarn')" class="pkg-tab text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 px-3 py-1.5">yarn</button>
+                <button onclick="setPkgManager('bun')" class="pkg-tab text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 px-3 py-1.5">bun</button>
+              </div>
+              <button onclick="copySnippet('pkgCommand')" class="text-xs text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 transition py-1 flex items-center gap-1 font-mono">
+                Copy
+              </button>
+            </div>
+            <div class="p-4 font-mono text-xs flex justify-between items-center text-slate-900 
+            dark:text-slate-100 bg-slate-100 dark:bg-slate-900 text-slate-100 rounded-b-xl">
+              <code id="pkgCommand"̉>npm i subatom-infer</code>
+            </div>
           </div>
-        </div>
+        </section>
 
-        <div class="mt-6 space-y-3">
-          <h1
-            class="text-2xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight"
-          >
-            Subatom Infer
-            <span class="text-brand-400 font-light block sm:inline">Reference Manual</span>
-          </h1>
-          <p class="text-slate-400 text-sm max-w-3xl leading-relaxed">
-            High-performance runtime validation, strict schema transformation, and compile-time type inference engine powered by the
-            <code class="text-brand-300 bg-brand-950/60 border border-brand-800/50 px-1.5 py-0.5 rounded font-mono font-medium">infer</code>
-            namespace.
+        <!-- SECTION 1: EXECUTION & PARSING METHODS -->
+        <section id="section-1" class="doc-section scroll-mt-24 space-y-4">
+          <div class="flex items-center gap-3">
+            <span
+              class="flex items-center justify-center w-7 h-7 rounded-lg bg-brand-600 text-white font-bold text-xs shadow-md shadow-brand-500/20"
+              >1</span
+            >
+            <h2 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">
+              Core Execution & Parsing Engine
+            </h2>
+          </div>
+
+          <p class="text-slate-600 dark:text-slate-400 text-xs">
+            Validation is invoked directly via synchronous and asynchronous methods attached to every schema instance.
           </p>
-        </div>
 
-        <!-- Architecture Highlight Banner -->
-        <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          <div class="bg-slate-950/60 border border-slate-800/90 p-3.5 rounded-xl shadow-sm hover:border-slate-700 transition">
-            <div class="text-[10px] font-bold text-brand-400 uppercase tracking-wider">Architecture</div>
-            <div class="text-sm font-semibold text-slate-100 mt-1">Dual Pipeline</div>
-            <p class="text-[11px] text-slate-400 mt-1 leading-snug">Sync throws on async; Async evaluates non-blocking.</p>
-          </div>
-          <div class="bg-slate-950/60 border border-slate-800/90 p-3.5 rounded-xl shadow-sm hover:border-slate-700 transition">
-            <div class="text-[10px] font-bold text-brand-400 uppercase tracking-wider">Typing</div>
-            <div class="text-sm font-semibold text-slate-100 mt-1 code-font text-xs">Schema&lt;Out, In&gt;</div>
-            <p class="text-[11px] text-slate-400 mt-1 leading-snug">Separates input preconditions from validated output.</p>
-          </div>
-          <div class="bg-slate-950/60 border border-slate-800/90 p-3.5 rounded-xl shadow-sm hover:border-slate-700 transition">
-            <div class="text-[10px] font-bold text-brand-400 uppercase tracking-wider">State</div>
-            <div class="text-sm font-semibold text-slate-100 mt-1">Immutable AST</div>
-            <p class="text-[11px] text-slate-400 mt-1 leading-snug">Zero side-effects, prototype poisoning protection.</p>
-          </div>
-          <div class="bg-slate-950/60 border border-slate-800/90 p-3.5 rounded-xl shadow-sm hover:border-slate-700 transition">
-            <div class="text-[10px] font-bold text-brand-400 uppercase tracking-wider">Diagnostics</div>
-            <div class="text-sm font-semibold text-slate-100 mt-1">Discriminated AST</div>
-            <p class="text-[11px] text-slate-400 mt-1 leading-snug">Exact JSON paths, key-level issue grouping.</p>
-          </div>
-        </div>
-      </header>
-
-      <!-- SECTION 1: EXECUTION & PARSING METHODS -->
-      <section class="space-y-4 no-break">
-        <div class="flex items-center gap-3">
-          <span
-            class="flex items-center justify-center w-7 h-7 rounded-lg bg-brand-600 text-white font-bold text-xs shadow-md shadow-brand-500/20"
-            >1</span
-          >
-          <h2 class="text-base sm:text-lg font-bold text-white tracking-tight">
-            Core Execution & Parsing Engine
-          </h2>
-        </div>
-
-        <p class="text-slate-400 text-xs">
-          Validation is invoked directly via synchronous and asynchronous methods attached to every schema instance.
-        </p>
-
-        <div
-          class="overflow-x-auto border border-slate-800 rounded-xl shadow-sm bg-slate-950/70 backdrop-blur"
-        >
-          <table class="w-full text-left border-collapse min-w-[560px]">
-            <thead
-              class="bg-slate-900 text-[11px] uppercase tracking-wider text-slate-400 border-b border-slate-800"
-            >
-              <tr>
-                <th class="p-3 font-semibold">Method</th>
-                <th class="p-3 font-semibold">Return Signature</th>
-                <th class="p-3 font-semibold">Behavior & Fail Mode</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-800/60 text-xs font-sans">
-              <tr class="hover:bg-slate-900/40 transition">
-                <td class="p-3 font-mono font-semibold text-brand-300">.parse(input)</td>
-                <td class="p-3 font-mono text-slate-300 text-[11px]">TOutput</td>
-                <td class="p-3 text-slate-400">
-                  Synchronous. Throws <code class="text-rose-400 font-mono bg-rose-950/40 px-1 py-0.5 rounded border border-rose-900/50">ValidationError</code> on invalid input or async pipelines.
-                </td>
-              </tr>
-              <tr class="hover:bg-slate-900/40 transition">
-                <td class="p-3 font-mono font-semibold text-brand-300">.safeParse(input)</td>
-                <td class="p-3 font-mono text-slate-300 text-[11px]">SafeParseResult&lt;TOutput&gt;</td>
-                <td class="p-3 text-slate-400">
-                  Returns <code class="font-mono text-emerald-400">{ success: true, data }</code> or <code class="font-mono text-rose-400">{ success: false, error }</code>.
-                </td>
-              </tr>
-              <tr class="hover:bg-slate-900/40 transition">
-                <td class="p-3 font-mono font-semibold text-brand-300">.parseAsync(input)</td>
-                <td class="p-3 font-mono text-slate-300 text-[11px]">Promise&lt;TOutput&gt;</td>
-                <td class="p-3 text-slate-400">
-                  Asynchronous execution. Awaits all async transformations, refinements, and sub-schemas.
-                </td>
-              </tr>
-              <tr class="hover:bg-slate-900/40 transition">
-                <td class="p-3 font-mono font-semibold text-brand-300">.safeParseAsync(input)</td>
-                <td class="p-3 font-mono text-slate-300 text-[11px]">Promise&lt;SafeParseResult&gt;</td>
-                <td class="p-3 text-slate-400">
-                  Non-throwing Promise resolving to a strongly typed discriminated union. Alias: <code class="font-mono text-slate-300">.spa()</code>.
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div
-          class="bg-slate-950 border border-slate-800 rounded-xl p-4 text-slate-100 font-mono text-[11px] leading-relaxed shadow-lg overflow-x-auto"
-        >
-          <span class="text-slate-500">// Importing the unified namespace</span><br />
-          <span class="text-indigo-400">import</span> { infer,
-          <span class="text-indigo-400">type</span> Infer }
-          <span class="text-indigo-400">from</span>
-          <span class="text-emerald-400">"subatom-infer"</span>;<br /><br />
-          <span class="text-indigo-400">const</span> User = infer.object({<br />
-          &nbsp;&nbsp;id: infer.uuid(),<br />
-          &nbsp;&nbsp;username: infer.string().min(<span class="text-amber-400">3</span>),<br />
-          });<br /><br />
-          <span class="text-slate-500">// Safe synchronous parsing</span><br />
-          <span class="text-indigo-400">const</span> result = User.safeParse({ id: <span class="text-emerald-400">"123e4567-e89b-12d3-a456-426614174000"</span>, username: <span class="text-emerald-400">"alex"</span> });<br />
-          <span class="text-indigo-400">if</span> (result.success) {<br />
-          &nbsp;&nbsp;console.log(result.data.username); <span class="text-slate-500">// Typed as string</span><br />
-          }
-        </div>
-      </section>
-
-      <!-- SECTION 2: PRIMITIVES & STRING FORMAT VALIDATORS -->
-      <section class="space-y-4 no-break">
-        <div class="flex items-center gap-3">
-          <span
-            class="flex items-center justify-center w-7 h-7 rounded-lg bg-brand-600 text-white font-bold text-xs shadow-md shadow-brand-500/20"
-            >2</span
-          >
-          <h2 class="text-base sm:text-lg font-bold text-white tracking-tight">
-            Primitives, Unit Types & String Validation API
-          </h2>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <!-- Primitives Card -->
           <div
-            class="bg-slate-950/70 border border-slate-800 rounded-xl p-4 shadow-sm space-y-2"
+            class="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm bg-slate-50 dark:bg-slate-950/70 backdrop-blur"
           >
-            <h3 class="text-xs font-bold uppercase tracking-wider text-brand-400">
-              Core Primitives & Singletons
-            </h3>
-            <div
-              class="bg-slate-950 rounded-lg p-3 border border-slate-800/80 font-mono text-[11px] text-slate-200 leading-relaxed overflow-x-auto"
-            >
-              infer.string()<br />
-              infer.number()<br />
-              infer.boolean()<br />
-              infer.bigint()<br />
-              infer.date()<br />
-              infer.symbol()<br />
-              infer.undefined()<br />
-              infer.null()<br />
-              infer.void()<br />
-              infer.any()<br />
-              infer.unknown()<br />
-              infer.never()<br />
-              infer.nan()<br />
-              infer.literal(<span class="text-emerald-400">"ACTIVE"</span>)
-            </div>
-          </div>
-
-          <!-- String Modifiers Card -->
-          <div
-            class="bg-slate-950/70 border border-slate-800 rounded-xl p-4 shadow-sm space-y-2"
-          >
-            <h3 class="text-xs font-bold uppercase tracking-wider text-brand-400">
-              String Formatting & Constraints
-            </h3>
-            <div
-              class="bg-slate-950 rounded-lg p-3 border border-slate-800/80 font-mono text-[11px] text-slate-200 leading-relaxed overflow-x-auto"
-            >
-              infer.string()<br />
-              &nbsp;&nbsp;.min(<span class="text-amber-400">5</span>).max(<span class="text-amber-400">100</span>).length(<span class="text-amber-400">20</span>)<br />
-              &nbsp;&nbsp;.email().url().httpUrl()<br />
-              &nbsp;&nbsp;.uuid().guid().cuid().cuid2()<br />
-              &nbsp;&nbsp;.ulid().nanoid()<br />
-              &nbsp;&nbsp;.regex(<span class="text-amber-400">/^[a-z]+$/i</span>)<br />
-              &nbsp;&nbsp;.startsWith(<span class="text-emerald-400">"sub_"</span>).endsWith(<span class="text-emerald-400">"_node"</span>)<br />
-              &nbsp;&nbsp;.includes(<span class="text-emerald-400">"@"</span>)<br />
-              &nbsp;&nbsp;.datetime().date().time().duration()<br />
-              &nbsp;&nbsp;.ipv4().ipv6().hostname()<br />
-              &nbsp;&nbsp;.trim().toLowerCase().toUpperCase()
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- SECTION 3: NUMBERS, BIGINT & NUMERIC ASSERTIONS -->
-      <section class="space-y-4 no-break">
-        <div class="flex items-center gap-3">
-          <span
-            class="flex items-center justify-center w-7 h-7 rounded-lg bg-brand-600 text-white font-bold text-xs shadow-md shadow-brand-500/20"
-            >3</span
-          >
-          <h2 class="text-base sm:text-lg font-bold text-white tracking-tight">
-            Number & BigInt Validation Constraints
-          </h2>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div
-            class="bg-slate-950/70 border border-slate-800 rounded-xl p-4 shadow-sm space-y-2"
-          >
-            <h3 class="text-xs font-bold uppercase tracking-wider text-brand-400">
-              Number Schema Constraints
-            </h3>
-            <div
-              class="bg-slate-950 rounded-lg p-3 border border-slate-800/80 font-mono text-[11px] text-slate-200 leading-relaxed overflow-x-auto"
-            >
-              infer.number()<br />
-              &nbsp;&nbsp;.int()<span class="text-slate-500"> // Integer only</span><br />
-              &nbsp;&nbsp;.safe()<span class="text-slate-500"> // Safe IEEE-754 range</span><br />
-              &nbsp;&nbsp;.finite()<span class="text-slate-500"> // Rejects Infinity</span><br />
-              &nbsp;&nbsp;.positive()<span class="text-slate-500"> // &gt; 0</span><br />
-              &nbsp;&nbsp;.nonnegative()<span class="text-slate-500"> // &gt;= 0</span><br />
-              &nbsp;&nbsp;.negative()<span class="text-slate-500"> // &lt; 0</span><br />
-              &nbsp;&nbsp;.nonpositive()<span class="text-slate-500"> // &lt;= 0</span><br />
-              &nbsp;&nbsp;.min(<span class="text-amber-400">1</span>).max(<span class="text-amber-400">100</span>)<br />
-              &nbsp;&nbsp;.gte(<span class="text-amber-400">1</span>).lte(<span class="text-amber-400">100</span>)<br />
-              &nbsp;&nbsp;.gt(<span class="text-amber-400">0</span>).lt(<span class="text-amber-400">101</span>)<br />
-              &nbsp;&nbsp;.multipleOf(<span class="text-amber-400">5</span>)
-            </div>
+            <table class="w-full text-left border-collapse min-w-[560px]">
+              <thead
+                class="bg-slate-100 dark:bg-slate-900 text-[11px] uppercase tracking-wider text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800"
+              >
+                <tr>
+                  <th class="p-3 font-semibold">Method</th>
+                  <th class="p-3 font-semibold">Return Signature</th>
+                  <th class="p-3 font-semibold">Behavior & Fail Mode</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-200 dark:divide-slate-800/60 text-xs font-sans">
+                <tr class="hover:bg-slate-100/50 dark:hover:bg-slate-900/40 transition">
+                  <td class="p-3 font-mono font-semibold text-brand-600 dark:text-brand-300">.parse(input)</td>
+                  <td class="p-3 font-mono text-slate-700 dark:text-slate-300 text-[11px]">TOutput</td>
+                  <td class="p-3 text-slate-600 dark:text-slate-400">
+                    Synchronous. Throws <code class="text-rose-600 dark:text-rose-400 font-mono bg-rose-50 dark:bg-rose-950/40 px-1 py-0.5 rounded border border-rose-200 dark:border-rose-900/50">ValidationError</code> on invalid input or async pipelines.
+                  </td>
+                </tr>
+                <tr class="hover:bg-slate-100/50 dark:hover:bg-slate-900/40 transition">
+                  <td class="p-3 font-mono font-semibold text-brand-600 dark:text-brand-300">.safeParse(input)</td>
+                  <td class="p-3 font-mono text-slate-700 dark:text-slate-300 text-[11px]">SafeParseResult&lt;TOutput&gt;</td>
+                  <td class="p-3 text-slate-600 dark:text-slate-400">
+                    Returns <code class="font-mono text-emerald-600 dark:text-emerald-400">{ success: true, data }</code> or <code class="font-mono text-rose-600 dark:text-rose-400">{ success: false, error }</code>.
+                  </td>
+                </tr>
+                <tr class="hover:bg-slate-100/50 dark:hover:bg-slate-900/40 transition">
+                  <td class="p-3 font-mono font-semibold text-brand-600 dark:text-brand-300">.parseAsync(input)</td>
+                  <td class="p-3 font-mono text-slate-700 dark:text-slate-300 text-[11px]">Promise&lt;TOutput&gt;</td>
+                  <td class="p-3 text-slate-600 dark:text-slate-400">
+                    Asynchronous execution. Awaits all async transformations, refinements, and sub-schemas.
+                  </td>
+                </tr>
+                <tr class="hover:bg-slate-100/50 dark:hover:bg-slate-900/40 transition">
+                  <td class="p-3 font-mono font-semibold text-brand-600 dark:text-brand-300">.safeParseAsync(input)</td>
+                  <td class="p-3 font-mono text-slate-700 dark:text-slate-300 text-[11px]">Promise&lt;SafeParseResult&gt;</td>
+                  <td class="p-3 text-slate-600 dark:text-slate-400">
+                    Non-throwing Promise resolving to a strongly typed discriminated union. Alias: <code class="font-mono text-slate-700 dark:text-slate-300">.spa()</code>.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
 
           <div
-            class="bg-slate-950/70 border border-slate-800 rounded-xl p-4 shadow-sm space-y-2"
+            class="relative group bg-slate-950 border border-slate-800 rounded-xl p-4 text-slate-100 font-mono text-[11px] leading-relaxed shadow-lg overflow-x-auto"
           >
-            <h3 class="text-xs font-bold uppercase tracking-wider text-brand-400">
-              BigInt Schema Constraints
-            </h3>
-            <div
-              class="bg-slate-950 rounded-lg p-3 border border-slate-800/80 font-mono text-[11px] text-slate-200 leading-relaxed overflow-x-auto"
+            <button onclick="copySnippet('code-parse')" class="absolute top-3 right-3 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded border border-slate-700 opacity-0 group-hover:opacity-100 transition">Copy</button>
+            <pre id="code-parse"><code><span class="text-slate-500">// Importing the unified namespace</span>
+<span class="text-indigo-400">import</span> { infer, <span class="text-indigo-400">type</span> Infer } <span class="text-indigo-400">from</span> <span class="text-emerald-400">"subatom-infer"</span>;
+
+<span class="text-indigo-400">const</span> User = infer.object({
+  id: infer.uuid(),
+  username: infer.string().min(<span class="text-amber-400">3</span>),
+});
+
+<span class="text-slate-500">// Safe synchronous parsing</span>
+<span class="text-indigo-400">const</span> result = User.safeParse({ id: <span class="text-emerald-400">"123e4567-e89b-12d3-a456-426614174000"</span>, username: <span class="text-emerald-400">"alex"</span> });
+<span class="text-indigo-400">if</span> (result.success) {
+  console.log(result.data.username); <span class="text-slate-500">// Typed as string</span>
+}</code></pre>
+          </div>
+        </section>
+
+        <!-- SECTION 2: PRIMITIVES & STRING FORMAT VALIDATORS -->
+        <section id="section-2" class="doc-section scroll-mt-24 space-y-4">
+          <div class="flex items-center gap-3">
+            <span
+              class="flex items-center justify-center w-7 h-7 rounded-lg bg-brand-600 text-white font-bold text-xs shadow-md shadow-brand-500/20"
+              >2</span
             >
-              infer.bigint()<br />
-              &nbsp;&nbsp;.positive()<span class="text-slate-500"> // &gt; 0n</span><br />
-              &nbsp;&nbsp;.nonnegative()<span class="text-slate-500"> // &gt;= 0n</span><br />
-              &nbsp;&nbsp;.negative()<span class="text-slate-500"> // &lt; 0n</span><br />
-              &nbsp;&nbsp;.nonpositive()<span class="text-slate-500"> // &lt;= 0n</span><br />
-              &nbsp;&nbsp;.min(<span class="text-amber-400">100n</span>)<br />
-              &nbsp;&nbsp;.max(<span class="text-amber-400">1000000n</span>)<br />
-              &nbsp;&nbsp;.multipleOf(<span class="text-amber-400">10n</span>)
+            <h2 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">
+              Primitives, Unit Types & String Validation API
+            </h2>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Primitives Card -->
+            <div
+              class="bg-white dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm space-y-2 relative group"
+            >
+              <div class="flex justify-between items-center">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">
+                  Core Primitives & Singletons
+                </h3>
+                <button onclick="copySnippet('code-primitives')" class="text-[11px] bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700 transition">Copy</button>
+              </div>
+              <div
+                class="bg-slate-950 rounded-lg p-3 border border-slate-800/80 font-mono text-[11px] text-slate-200 leading-relaxed overflow-x-auto"
+              >
+                <pre id="code-primitives"><code>infer.string()
+infer.number()
+infer.boolean()
+infer.bigint()
+infer.date()
+infer.symbol()
+infer.undefined()
+infer.null()
+infer.void()
+infer.any()
+infer.unknown()
+infer.never()
+infer.nan()
+infer.literal(<span class="text-emerald-400">"ACTIVE"</span>)</code></pre>
+              </div>
+            </div>
+
+            <!-- String Modifiers Card -->
+            <div
+              class="bg-white dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm space-y-2 relative group"
+            >
+              <div class="flex justify-between items-center">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">
+                  String Formatting & Constraints
+                </h3>
+                <button onclick="copySnippet('code-strings')" class="text-[11px] bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700 transition">Copy</button>
+              </div>
+              <div
+                class="bg-slate-950 rounded-lg p-3 border border-slate-800/80 font-mono text-[11px] text-slate-200 leading-relaxed overflow-x-auto"
+              >
+                <pre id="code-strings"><code>infer.string()
+  .min(<span class="text-amber-400">5</span>).max(<span class="text-amber-400">100</span>).length(<span class="text-amber-400">20</span>)
+  .email().url().httpUrl()
+  .uuid().guid().cuid().cuid2()
+  .ulid().nanoid()
+  .regex(<span class="text-amber-400">/^[a-z]+$/i</span>)
+  .startsWith(<span class="text-emerald-400">"sub_"</span>).endsWith(<span class="text-emerald-400">"_node"</span>)
+  .includes(<span class="text-emerald-400">"@"</span>)
+  .datetime().date().time().duration()
+  .ipv4().ipv6().hostname()
+  .trim().toLowerCase().toUpperCase()</code></pre>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <div class="page-break"></div>
+        <!-- SECTION 3: NUMBERS, BIGINT & NUMERIC ASSERTIONS -->
+        <section id="section-3" class="doc-section scroll-mt-24 space-y-4">
+          <div class="flex items-center gap-3">
+            <span
+              class="flex items-center justify-center w-7 h-7 rounded-lg bg-brand-600 text-white font-bold text-xs shadow-md shadow-brand-500/20"
+              >3</span
+            >
+            <h2 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">
+              Number & BigInt Validation Constraints
+            </h2>
+          </div>
 
-      <!-- SECTION 4: OBJECTS & STRUCTURAL POLICIES -->
-      <section class="space-y-4 no-break">
-        <div class="flex items-center gap-3">
-          <span
-            class="flex items-center justify-center w-7 h-7 rounded-lg bg-brand-600 text-white font-bold text-xs shadow-md shadow-brand-500/20"
-            >4</span
-          >
-          <h2 class="text-base sm:text-lg font-bold text-white tracking-tight">
-            Objects & Structural Policies
-          </h2>
-        </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div
+              class="bg-white dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm space-y-2 relative group"
+            >
+              <div class="flex justify-between items-center">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">
+                  Number Schema Constraints
+                </h3>
+                <button onclick="copySnippet('code-nums')" class="text-[11px] bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700 transition">Copy</button>
+              </div>
+              <div
+                class="bg-slate-950 rounded-lg p-3 border border-slate-800/80 font-mono text-[11px] text-slate-200 leading-relaxed overflow-x-auto"
+              >
+                <pre id="code-nums"><code>infer.number()
+  .int()<span class="text-slate-500"> // Integer only</span>
+  .safe()<span class="text-slate-500"> // Safe IEEE-754 range</span>
+  .finite()<span class="text-slate-500"> // Rejects Infinity</span>
+  .positive()<span class="text-slate-500"> // &gt; 0</span>
+  .nonnegative()<span class="text-slate-500"> // &gt;= 0</span>
+  .negative()<span class="text-slate-500"> // &lt; 0</span>
+  .nonpositive()<span class="text-slate-500"> // &lt;= 0</span>
+  .min(<span class="text-amber-400">1</span>).max(<span class="text-amber-400">100</span>)
+  .gte(<span class="text-amber-400">1</span>).lte(<span class="text-amber-400">100</span>)
+  .gt(<span class="text-amber-400">0</span>).lt(<span class="text-amber-400">101</span>)
+  .multipleOf(<span class="text-amber-400">5</span>)</code></pre>
+              </div>
+            </div>
 
-        <p class="text-slate-400 text-xs">
-          Objects offer manipulation primitives, structural modifiers, key policies, and recursive transformations.
-        </p>
+            <div
+              class="bg-white dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm space-y-2 relative group"
+            >
+              <div class="flex justify-between items-center">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">
+                  BigInt Schema Constraints
+                </h3>
+                <button onclick="copySnippet('code-bigint')" class="text-[11px] bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700 transition">Copy</button>
+              </div>
+              <div
+                class="bg-slate-950 rounded-lg p-3 border border-slate-800/80 font-mono text-[11px] text-slate-200 leading-relaxed overflow-x-auto"
+              >
+                <pre id="code-bigint"><code>infer.bigint()
+  .positive()<span class="text-slate-500"> // &gt; 0n</span>
+  .nonnegative()<span class="text-slate-500"> // &gt;= 0n</span>
+  .negative()<span class="text-slate-500"> // &lt; 0n</span>
+  .nonpositive()<span class="text-slate-500"> // &lt;= 0n</span>
+  .min(<span class="text-amber-400">100n</span>)
+  .max(<span class="text-amber-400">1000000n</span>)
+  .multipleOf(<span class="text-amber-400">10n</span>)</code></pre>
+              </div>
+            </div>
+          </div>
+        </section>
 
-        <div
-          class="bg-slate-950 border border-slate-800 rounded-xl p-4 text-slate-100 font-mono text-[11px] leading-relaxed shadow-lg overflow-x-auto"
-        >
-          <span class="text-indigo-400">const</span> BaseUser = infer.object({<br />
-          &nbsp;&nbsp;id: infer.uuid(),<br />
-          &nbsp;&nbsp;name: infer.string(),<br />
-          &nbsp;&nbsp;role: infer.enum([<span class="text-emerald-400">"admin"</span>, <span class="text-emerald-400">"user"</span>]),<br />
-          });<br /><br />
-          <span class="text-slate-500">// Object Policy Modifiers</span><br />
-          <span class="text-indigo-400">const</span> StrictUser = BaseUser.strict(); <span class="text-slate-500">// Rejects unrecognized keys</span><br />
-          <span class="text-indigo-400">const</span> LooseUser = BaseUser.passthrough(); <span class="text-slate-500">// Retains unknown keys</span><br />
-          <span class="text-indigo-400">const</span> StrippedUser = BaseUser.strip(); <span class="text-slate-500">// Default: strips extra properties</span><br />
-          <span class="text-indigo-400">const</span> CatchallUser = BaseUser.catchall(infer.boolean()); <span class="text-slate-500">// Validates unknown keys</span><br /><br />
-          <span class="text-slate-500">// Structural Composition & Transformations</span><br />
-          <span class="text-indigo-400">const</span> ExtendedUser = BaseUser.extend({ email: infer.email() });<br />
-          <span class="text-indigo-400">const</span> MergedSchema = BaseUser.merge(infer.object({ traceId: infer.string() }));<br />
-          <span class="text-indigo-400">const</span> PickedName = BaseUser.pick({ name: <span class="text-amber-400">true</span> });<br />
-          <span class="text-indigo-400">const</span> OmittedId = BaseUser.omit({ id: <span class="text-amber-400">true</span> });<br />
-          <span class="text-indigo-400">const</span> PartialUser = BaseUser.partial(); <span class="text-slate-500">// All fields optional</span><br />
-          <span class="text-indigo-400">const</span> RequiredUser = PartialUser.required(); <span class="text-slate-500">// All fields required</span><br />
-          <span class="text-indigo-400">const</span> DeepOptional = BaseUser.deepPartial(); <span class="text-slate-500">// Recursively optional</span><br />
-          <span class="text-indigo-400">const</span> UserKeysEnum = BaseUser.keyof(); <span class="text-slate-500">// Returns EnumSchema of keys</span>
-        </div>
-      </section>
+        <!-- SECTION 4: OBJECTS & STRUCTURAL POLICIES -->
+        <section id="section-4" class="doc-section scroll-mt-24 space-y-4">
+          <div class="flex items-center gap-3">
+            <span
+              class="flex items-center justify-center w-7 h-7 rounded-lg bg-brand-600 text-white font-bold text-xs shadow-md shadow-brand-500/20"
+              >4</span
+            >
+            <h2 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">
+              Objects & Structural Policies
+            </h2>
+          </div>
 
-      <!-- SECTION 5: COLLECTIONS & DATA STRUCTURES -->
-      <section class="space-y-4 no-break">
-        <div class="flex items-center gap-3">
-          <span
-            class="flex items-center justify-center w-7 h-7 rounded-lg bg-brand-600 text-white font-bold text-xs shadow-md shadow-brand-500/20"
-            >5</span
-          >
-          <h2 class="text-base sm:text-lg font-bold text-white tracking-tight">
-            Collections: Arrays, Tuples, Records, Sets & Maps
-          </h2>
-        </div>
+          <p class="text-slate-600 dark:text-slate-400 text-xs">
+            Objects offer manipulation primitives, structural modifiers, key policies, and recursive transformations.
+          </p>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <!-- Arrays & Tuples -->
           <div
-            class="bg-slate-950/70 border border-slate-800 rounded-xl p-4 shadow-sm space-y-2"
+            class="relative group bg-slate-950 border border-slate-800 rounded-xl p-4 text-slate-100 font-mono text-[11px] leading-relaxed shadow-lg overflow-x-auto"
           >
-            <h3 class="text-xs font-bold uppercase tracking-wider text-brand-400">
-              Arrays & Fixed Tuples
-            </h3>
-            <div
-              class="bg-slate-950 rounded-lg p-3 border border-slate-800/80 font-mono text-[11px] text-slate-200 leading-relaxed overflow-x-auto"
+            <button onclick="copySnippet('code-obj-all')" class="absolute top-3 right-3 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded border border-slate-700 opacity-0 group-hover:opacity-100 transition">Copy</button>
+            <pre id="code-obj-all"><code><span class="text-indigo-400">const</span> BaseUser = infer.object({
+  id: infer.uuid(),
+  name: infer.string(),
+  role: infer.enum([<span class="text-emerald-400">"admin"</span>, <span class="text-emerald-400">"user"</span>]),
+});
+
+<span class="text-slate-500">// Object Policy Modifiers</span>
+<span class="text-indigo-400">const</span> StrictUser = BaseUser.strict(); <span class="text-slate-500">// Rejects unrecognized keys</span>
+<span class="text-indigo-400">const</span> LooseUser = BaseUser.passthrough(); <span class="text-slate-500">// Retains unknown keys</span>
+<span class="text-indigo-400">const</span> StrippedUser = BaseUser.strip(); <span class="text-slate-500">// Default: strips extra properties</span>
+<span class="text-indigo-400">const</span> CatchallUser = BaseUser.catchall(infer.boolean()); <span class="text-slate-500">// Validates unknown keys</span>
+
+<span class="text-slate-500">// Structural Composition & Transformations</span>
+<span class="text-indigo-400">const</span> ExtendedUser = BaseUser.extend({ email: infer.email() });
+<span class="text-indigo-400">const</span> MergedSchema = BaseUser.merge(infer.object({ traceId: infer.string() }));
+<span class="text-indigo-400">const</span> PickedName = BaseUser.pick({ name: <span class="text-amber-400">true</span> });
+<span class="text-indigo-400">const</span> OmittedId = BaseUser.omit({ id: <span class="text-amber-400">true</span> });
+<span class="text-indigo-400">const</span> PartialUser = BaseUser.partial(); <span class="text-slate-500">// All fields optional</span>
+<span class="text-indigo-400">const</span> RequiredUser = PartialUser.required(); <span class="text-slate-500">// All fields required</span>
+<span class="text-indigo-400">const</span> DeepOptional = BaseUser.deepPartial(); <span class="text-slate-500">// Recursively optional</span>
+<span class="text-indigo-400">const</span> UserKeysEnum = BaseUser.keyof(); <span class="text-slate-500">// Returns EnumSchema of keys</span></code></pre>
+          </div>
+        </section>
+
+        <!-- SECTION 5: COLLECTIONS & DATA STRUCTURES -->
+        <section id="section-5" class="doc-section scroll-mt-24 space-y-4">
+          <div class="flex items-center gap-3">
+            <span
+              class="flex items-center justify-center w-7 h-7 rounded-lg bg-brand-600 text-white font-bold text-xs shadow-md shadow-brand-500/20"
+              >5</span
             >
-              <span class="text-slate-500">// Array with length bounds</span><br />
-              <span class="text-indigo-400">const</span> Tags = infer.array(infer.string())<br />
-              &nbsp;&nbsp;.min(<span class="text-amber-400">1</span>).max(<span class="text-amber-400">10</span>).nonempty();<br /><br />
-              <span class="text-slate-500">// Tuples with positional schemas</span><br />
-              <span class="text-indigo-400">const</span> Coord = infer.tuple([<br />
-              &nbsp;&nbsp;infer.number(),<br />
-              &nbsp;&nbsp;infer.number(),<br />
-              &nbsp;&nbsp;infer.number().optional()<br />
-              ]);
-            </div>
+            <h2 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">
+              Collections: Arrays, Tuples, Records, Sets & Maps
+            </h2>
           </div>
 
-          <!-- Records, Sets & Maps -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Arrays & Tuples -->
+            <div
+              class="bg-white dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm space-y-2 relative group"
+            >
+              <div class="flex justify-between items-center">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">
+                  Arrays & Fixed Tuples
+                </h3>
+                <button onclick="copySnippet('code-arrays')" class="text-[11px] bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700 transition">Copy</button>
+              </div>
+              <div
+                class="bg-slate-950 rounded-lg p-3 border border-slate-800/80 font-mono text-[11px] text-slate-200 leading-relaxed overflow-x-auto"
+              >
+                <pre id="code-arrays"><code><span class="text-slate-500">// Array with length bounds</span>
+<span class="text-indigo-400">const</span> Tags = infer.array(infer.string())
+  .min(<span class="text-amber-400">1</span>).max(<span class="text-amber-400">10</span>).nonempty();
+
+<span class="text-slate-500">// Tuples with positional schemas</span>
+<span class="text-indigo-400">const</span> Coord = infer.tuple([
+  infer.number(),
+  infer.number(),
+  infer.number().optional()
+]);</code></pre>
+              </div>
+            </div>
+
+            <!-- Records, Sets & Maps -->
+            <div
+              class="bg-white dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm space-y-2 relative group"
+            >
+              <div class="flex justify-between items-center">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">
+                  Records, Sets & Maps
+                </h3>
+                <button onclick="copySnippet('code-records')" class="text-[11px] bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700 transition">Copy</button>
+              </div>
+              <div
+                class="bg-slate-950 rounded-lg p-3 border border-slate-800/80 font-mono text-[11px] text-slate-200 leading-relaxed overflow-x-auto"
+              >
+                <pre id="code-records"><code><span class="text-slate-500">// Dynamic Key-Value Map</span>
+<span class="text-indigo-400">const</span> Config = infer.record(
+  infer.string().min(<span class="text-amber-400">2</span>),
+  infer.number()
+);
+
+<span class="text-slate-500">// Native JS Set & Map instances</span>
+<span class="text-indigo-400">const</span> Roles = infer.set(infer.string()).min(<span class="text-amber-400">1</span>);
+<span class="text-indigo-400">const</span> Lookup = infer.map(infer.uuid(), infer.boolean());</code></pre>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- SECTION 6: COMBINATORS & SPECIAL TYPES -->
+        <section id="section-6" class="doc-section scroll-mt-24 space-y-4">
+          <div class="flex items-center gap-3">
+            <span
+              class="flex items-center justify-center w-7 h-7 rounded-lg bg-brand-600 text-white font-bold text-xs shadow-md shadow-brand-500/20"
+              >6</span
+            >
+            <h2 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">
+              Combinators, Special Schemas & Recursive Types
+            </h2>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Unions & Intersections -->
+            <div
+              class="bg-white dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm space-y-2 relative group"
+            >
+              <div class="flex justify-between items-center">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">
+                  Tagged & Untagged Unions
+                </h3>
+                <button onclick="copySnippet('code-unions')" class="text-[11px] bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700 transition">Copy</button>
+              </div>
+              <div
+                class="bg-slate-950 rounded-lg p-3 border border-slate-800/80 font-mono text-[11px] text-slate-200 leading-relaxed overflow-x-auto"
+              >
+                <pre id="code-unions"><code><span class="text-slate-500">// Discriminated Union (O(1) matching)</span>
+<span class="text-indigo-400">const</span> Event = infer.discriminatedUnion(<span class="text-emerald-400">"type"</span>, [
+  infer.object({ type: infer.literal(<span class="text-emerald-400">"click"</span>), x: infer.number() }),
+  infer.object({ type: infer.literal(<span class="text-emerald-400">"hover"</span>), element: infer.string() })
+]);
+
+<span class="text-slate-500">// Union & Intersection</span>
+<span class="text-indigo-400">const</span> StrOrNum = infer.union([infer.string(), infer.number()]);
+<span class="text-indigo-400">const</span> Combined = infer.intersection(SchemaA, SchemaB);</code></pre>
+              </div>
+            </div>
+
+            <!-- Special: Function, Promise, File, Lazy -->
+            <div
+              class="bg-white dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm space-y-2 relative group"
+            >
+              <div class="flex justify-between items-center">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">
+                  Function, Promise, File & Lazy
+                </h3>
+                <button onclick="copySnippet('code-specials')" class="text-[11px] bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700 transition">Copy</button>
+              </div>
+              <div
+                class="bg-slate-950 rounded-lg p-3 border border-slate-800/80 font-mono text-[11px] text-slate-200 leading-relaxed overflow-x-auto"
+              >
+                <pre id="code-specials"><code><span class="text-slate-500">// Function Schema</span>
+<span class="text-indigo-400">const</span> AddFn = infer.function(
+  infer.tuple([infer.number(), infer.number()]),
+  infer.number()
+);
+
+<span class="text-slate-500">// Promise, File & Recursive Lazy</span>
+<span class="text-indigo-400">const</span> AsyncStr = infer.promise(infer.string());
+<span class="text-indigo-400">const</span> Upload = infer.file().max(<span class="text-amber-400">5_000_000</span>).mime(<span class="text-emerald-400">"image/png"</span>);
+<span class="text-indigo-400">const</span> Node = infer.lazy(() =&gt; infer.object({
+  next: Node.optional()
+}));</code></pre>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- SECTION 7: MODIFIERS, PIPELINE & REFINEMENTS -->
+        <section id="section-7" class="doc-section scroll-mt-24 space-y-4">
+          <div class="flex items-center gap-3">
+            <span
+              class="flex items-center justify-center w-7 h-7 rounded-lg bg-brand-600 text-white font-bold text-xs shadow-md shadow-brand-500/20"
+              >7</span
+            >
+            <h2 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">
+              Modifiers, Pipelines, Codecs & Refinements
+            </h2>
+          </div>
+
           <div
-            class="bg-slate-950/70 border border-slate-800 rounded-xl p-4 shadow-sm space-y-2"
+            class="relative group bg-slate-950 border border-slate-800 rounded-xl p-4 text-slate-100 font-mono text-[11px] leading-relaxed shadow-lg overflow-x-auto"
           >
-            <h3 class="text-xs font-bold uppercase tracking-wider text-brand-400">
-              Records, Sets & Maps
-            </h3>
-            <div
-              class="bg-slate-950 rounded-lg p-3 border border-slate-800/80 font-mono text-[11px] text-slate-200 leading-relaxed overflow-x-auto"
+            <button onclick="copySnippet('code-pipe-refine')" class="absolute top-3 right-3 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded border border-slate-700 opacity-0 group-hover:opacity-100 transition">Copy</button>
+            <pre id="code-pipe-refine"><code><span class="text-slate-500">// 1. Modifiers & Defaults</span>
+<span class="text-indigo-400">const</span> OptStr = infer.string().optional(); <span class="text-slate-500">// string | undefined</span>
+<span class="text-indigo-400">const</span> NullableNum = infer.number().nullable(); <span class="text-slate-500">// number | null</span>
+<span class="text-indigo-400">const</span> NullishDate = infer.date().nullish(); <span class="text-slate-500">// Date | null | undefined</span>
+<span class="text-indigo-400">const</span> DefaultPort = infer.number().default(<span class="text-amber-400">3000</span>);
+<span class="text-indigo-400">const</span> PrefaultVal = infer.string().prefault(<span class="text-emerald-400">"anonymous"</span>);
+<span class="text-indigo-400">const</span> SafeValue = infer.number().catch(<span class="text-amber-400">0</span>);
+
+<span class="text-slate-500">// 2. Transformation Pipeline & Pipe</span>
+<span class="text-indigo-400">const</span> StrToDate = infer.string().transform((val) =&gt; <span class="text-indigo-400">new</span> Date(val));
+<span class="text-indigo-400">const</span> PipedValidation = infer.pipe(infer.string().min(<span class="text-amber-400">2</span>), infer.string().email());
+
+<span class="text-slate-500">// 3. Refinements & SuperRefine</span>
+<span class="text-indigo-400">const</span> PasswordCheck = infer.object({
+  password: infer.string().min(<span class="text-amber-400">8</span>),
+  confirm: infer.string()
+}).superRefine((data, ctx) =&gt; {
+  <span class="text-indigo-400">if</span> (data.password !== data.confirm) {
+    ctx.addIssue({ code: <span class="text-emerald-400">"custom"</span>, message: <span class="text-emerald-400">"Passwords must match"</span> });
+  }
+});
+
+<span class="text-slate-500">// 4. Nominal Branding & Bidirectional Codecs</span>
+<span class="text-indigo-400">const</span> UserIdSchema = infer.brand(infer.uuid(), <span class="text-emerald-400">"UserId"</span>);
+<span class="text-indigo-400">const</span> Base64Codec = infer.codec(
+  infer.string().transform((str) =&gt; Buffer.from(str, <span class="text-emerald-400">"base64"</span>)),
+  (buf: Buffer) =&gt; buf.toString(<span class="text-emerald-400">"base64"</span>)
+);</code></pre>
+          </div>
+        </section>
+
+        <!-- SECTION 8: COERCION & ERROR FORMATTING -->
+        <section id="section-8" class="doc-section scroll-mt-24 space-y-4">
+          <div class="flex items-center gap-3">
+            <span
+              class="flex items-center justify-center w-7 h-7 rounded-lg bg-brand-600 text-white font-bold text-xs shadow-md shadow-brand-500/20"
+              >8</span
             >
-              <span class="text-slate-500">// Dynamic Key-Value Map</span><br />
-              <span class="text-indigo-400">const</span> Config = infer.record(<br />
-              &nbsp;&nbsp;infer.string().min(<span class="text-amber-400">2</span>),<br />
-              &nbsp;&nbsp;infer.number()<br />
-              );<br /><br />
-              <span class="text-slate-500">// Native JS Set & Map instances</span><br />
-              <span class="text-indigo-400">const</span> Roles = infer.set(infer.string()).min(<span class="text-amber-400">1</span>);<br />
-              <span class="text-indigo-400">const</span> Lookup = infer.map(infer.uuid(), infer.boolean());
+            <h2 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">
+              Coercion Engine & Error Formatting API
+            </h2>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Coercion -->
+            <div
+              class="bg-white dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm space-y-2 relative group"
+            >
+              <div class="flex justify-between items-center">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">
+                  Primitive Coercion
+                </h3>
+                <button onclick="copySnippet('code-coerce')" class="text-[11px] bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700 transition">Copy</button>
+              </div>
+              <div
+                class="bg-slate-950 rounded-lg p-3 border border-slate-800/80 font-mono text-[11px] text-slate-200 leading-relaxed overflow-x-auto"
+              >
+                <pre id="code-coerce"><code>infer.coerce.string()
+infer.coerce.number().int()
+infer.coerce.boolean()
+infer.coerce.bigint()
+infer.coerce.date()
+
+<span class="text-slate-500">// Automatically parses strings</span>
+infer.coerce.number().parse(<span class="text-emerald-400">"42"</span>); <span class="text-slate-500">// 42 (number)</span></code></pre>
+              </div>
+            </div>
+
+            <!-- Error Tree -->
+            <div
+              class="bg-white dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm space-y-2 relative group"
+            >
+              <div class="flex justify-between items-center">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">
+                  Error Tree Formatting
+                </h3>
+                <button onclick="copySnippet('code-errors')" class="text-[11px] bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700 transition">Copy</button>
+              </div>
+              <div
+                class="bg-slate-950 rounded-lg p-3 border border-slate-800/80 font-mono text-[11px] text-slate-200 leading-relaxed overflow-x-auto"
+              >
+                <pre id="code-errors"><code><span class="text-indigo-400">try</span> {
+  UserSchema.parse(badInput);
+} <span class="text-indigo-400">catch</span> (err) {
+  <span class="text-slate-500">// Form & field error record</span>
+  err.flatten();
+  <span class="text-slate-500">// Deeply nested issue tree</span>
+  err.format();
+  <span class="text-slate-500">// Pretty CLI string format</span>
+  console.log(err.prettifyError());
+}</code></pre>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <!-- SECTION 6: COMBINATORS & SPECIAL TYPES -->
-      <section class="space-y-4 no-break">
-        <div class="flex items-center gap-3">
-          <span
-            class="flex items-center justify-center w-7 h-7 rounded-lg bg-brand-600 text-white font-bold text-xs shadow-md shadow-brand-500/20"
-            >6</span
-          >
-          <h2 class="text-base sm:text-lg font-bold text-white tracking-tight">
-            Combinators, Special Schemas & Recursive Types
-          </h2>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <!-- Unions & Intersections -->
+        <!-- FOOTER -->
+        <footer class="border-t border-slate-200 dark:border-slate-800 pt-8 no-break">
           <div
-            class="bg-slate-950/70 border border-slate-800 rounded-xl p-4 shadow-sm space-y-2"
+            class="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 dark:text-slate-400 font-mono text-center sm:text-left"
           >
-            <h3 class="text-xs font-bold uppercase tracking-wider text-brand-400">
-              Tagged & Untagged Unions
-            </h3>
-            <div
-              class="bg-slate-950 rounded-lg p-3 border border-slate-800/80 font-mono text-[11px] text-slate-200 leading-relaxed overflow-x-auto"
-            >
-              <span class="text-slate-500">// Discriminated Union (O(1) matching)</span><br />
-              <span class="text-indigo-400">const</span> Event = infer.discriminatedUnion(<span class="text-emerald-400">"type"</span>, [<br />
-              &nbsp;&nbsp;infer.object({ type: infer.literal(<span class="text-emerald-400">"click"</span>), x: infer.number() }),<br />
-              &nbsp;&nbsp;infer.object({ type: infer.literal(<span class="text-emerald-400">"hover"</span>), element: infer.string() })<br />
-              ]);<br /><br />
-              <span class="text-slate-500">// Union & Intersection</span><br />
-              <span class="text-indigo-400">const</span> StrOrNum = infer.union([infer.string(), infer.number()]);<br />
-              <span class="text-indigo-400">const</span> Combined = infer.intersection(SchemaA, SchemaB);
+            <div class="flex items-center gap-2">
+              <img
+                src="https://res.cloudinary.com/drdfur81n/image/upload/v1786723815/SubAtom_short_logo_a3aa59.png"
+                alt="SubAtom Logo Mark"
+                class="h-4 w-4 object-contain"
+              />
+              <span>Generated by Subatom Library Architect Suite</span>
             </div>
+            <div>MIT License • Strict TypeScript Architecture</div>
           </div>
-
-          <!-- Special: Function, Promise, File, Lazy -->
-          <div
-            class="bg-slate-950/70 border border-slate-800 rounded-xl p-4 shadow-sm space-y-2"
-          >
-            <h3 class="text-xs font-bold uppercase tracking-wider text-brand-400">
-              Function, Promise, File & Lazy
-            </h3>
-            <div
-              class="bg-slate-950 rounded-lg p-3 border border-slate-800/80 font-mono text-[11px] text-slate-200 leading-relaxed overflow-x-auto"
-            >
-              <span class="text-slate-500">// Function Schema</span><br />
-              <span class="text-indigo-400">const</span> AddFn = infer.function(<br />
-              &nbsp;&nbsp;infer.tuple([infer.number(), infer.number()]),<br />
-              &nbsp;&nbsp;infer.number()<br />
-              );<br /><br />
-              <span class="text-slate-500">// Promise, File & Recursive Lazy</span><br />
-              <span class="text-indigo-400">const</span> AsyncStr = infer.promise(infer.string());<br />
-              <span class="text-indigo-400">const</span> Upload = infer.file().max(<span class="text-amber-400">5_000_000</span>).mime(<span class="text-emerald-400">"image/png"</span>);<br />
-              <span class="text-indigo-400">const</span> Node = infer.lazy(() =&gt; infer.object({<br />
-              &nbsp;&nbsp;next: Node.optional()<br />
-              }));
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <div class="page-break"></div>
-
-      <!-- SECTION 7: MODIFIERS, PIPELINE & REFINEMENTS -->
-      <section class="space-y-4 no-break">
-        <div class="flex items-center gap-3">
-          <span
-            class="flex items-center justify-center w-7 h-7 rounded-lg bg-brand-600 text-white font-bold text-xs shadow-md shadow-brand-500/20"
-            >7</span
-          >
-          <h2 class="text-base sm:text-lg font-bold text-white tracking-tight">
-            Modifiers, Pipelines, Codecs & Refinements
-          </h2>
-        </div>
-
-        <div
-          class="bg-slate-950 border border-slate-800 rounded-xl p-4 text-slate-100 font-mono text-[11px] leading-relaxed shadow-lg overflow-x-auto"
-        >
-          <span class="text-slate-500">// 1. Modifiers & Defaults</span><br />
-          <span class="text-indigo-400">const</span> OptStr = infer.string().optional(); <span class="text-slate-500">// string | undefined</span><br />
-          <span class="text-indigo-400">const</span> NullableNum = infer.number().nullable(); <span class="text-slate-500">// number | null</span><br />
-          <span class="text-indigo-400">const</span> NullishDate = infer.date().nullish(); <span class="text-slate-500">// Date | null | undefined</span><br />
-          <span class="text-indigo-400">const</span> DefaultPort = infer.number().default(<span class="text-amber-400">3000</span>);<br />
-          <span class="text-indigo-400">const</span> PrefaultVal = infer.string().prefault(<span class="text-emerald-400">"anonymous"</span>);<br />
-          <span class="text-indigo-400">const</span> SafeValue = infer.number().catch(<span class="text-amber-400">0</span>);<br /><br />
-
-          <span class="text-slate-500">// 2. Transformation Pipeline & Pipe</span><br />
-          <span class="text-indigo-400">const</span> StrToDate = infer.string().transform((val) =&gt; <span class="text-indigo-400">new</span> Date(val));<br />
-          <span class="text-indigo-400">const</span> PipedValidation = infer.pipe(infer.string().min(<span class="text-amber-400">2</span>), infer.string().email());<br /><br />
-
-          <span class="text-slate-500">// 3. Refinements & SuperRefine</span><br />
-          <span class="text-indigo-400">const</span> PasswordCheck = infer.object({<br />
-          &nbsp;&nbsp;password: infer.string().min(<span class="text-amber-400">8</span>),<br />
-          &nbsp;&nbsp;confirm: infer.string()<br />
-          }).superRefine((data, ctx) =&gt; {<br />
-          &nbsp;&nbsp;<span class="text-indigo-400">if</span> (data.password !== data.confirm) {<br />
-          &nbsp;&nbsp;&nbsp;&nbsp;ctx.addIssue({ code: <span class="text-emerald-400">"custom"</span>, message: <span class="text-emerald-400">"Passwords must match"</span> });<br />
-          &nbsp;&nbsp;}<br />
-          });<br /><br />
-
-          <span class="text-slate-500">// 4. Nominal Branding & Bidirectional Codecs</span><br />
-          <span class="text-indigo-400">const</span> UserIdSchema = infer.brand(infer.uuid(), <span class="text-emerald-400">"UserId"</span>);<br />
-          <span class="text-indigo-400">const</span> Base64Codec = infer.codec(<br />
-          &nbsp;&nbsp;infer.string().transform((str) =&gt; Buffer.from(str, <span class="text-emerald-400">"base64"</span>)),<br />
-          &nbsp;&nbsp;(buf: Buffer) =&gt; buf.toString(<span class="text-emerald-400">"base64"</span>)<br />
-          );
-        </div>
-      </section>
-
-      <!-- SECTION 8: COERCION & ERROR FORMATTING -->
-      <section class="space-y-4 no-break">
-        <div class="flex items-center gap-3">
-          <span
-            class="flex items-center justify-center w-7 h-7 rounded-lg bg-brand-600 text-white font-bold text-xs shadow-md shadow-brand-500/20"
-            >8</span
-          >
-          <h2 class="text-base sm:text-lg font-bold text-white tracking-tight">
-            Coercion Engine & Error Formatting API
-          </h2>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <!-- Coercion -->
-          <div
-            class="bg-slate-950/70 border border-slate-800 rounded-xl p-4 shadow-sm space-y-2"
-          >
-            <h3 class="text-xs font-bold uppercase tracking-wider text-brand-400">
-              Primitive Coercion
-            </h3>
-            <div
-              class="bg-slate-950 rounded-lg p-3 border border-slate-800/80 font-mono text-[11px] text-slate-200 leading-relaxed overflow-x-auto"
-            >
-              infer.coerce.string()<br />
-              infer.coerce.number().int()<br />
-              infer.coerce.boolean()<br />
-              infer.coerce.bigint()<br />
-              infer.coerce.date()<br /><br />
-              <span class="text-slate-500">// Automatically parses strings</span><br />
-              infer.coerce.number().parse(<span class="text-emerald-400">"42"</span>); <span class="text-slate-500">// 42 (number)</span>
-            </div>
-          </div>
-
-          <!-- Error Tree -->
-          <div
-            class="bg-slate-950/70 border border-slate-800 rounded-xl p-4 shadow-sm space-y-2"
-          >
-            <h3 class="text-xs font-bold uppercase tracking-wider text-brand-400">
-              Error Tree Formatting
-            </h3>
-            <div
-              class="bg-slate-950 rounded-lg p-3 border border-slate-800/80 font-mono text-[11px] text-slate-200 leading-relaxed overflow-x-auto"
-            >
-              <span class="text-indigo-400">try</span> {<br />
-              &nbsp;&nbsp;UserSchema.parse(badInput);<br />
-              } <span class="text-indigo-400">catch</span> (err) {<br />
-              &nbsp;&nbsp;<span class="text-slate-500">// Form & field error record</span><br />
-              &nbsp;&nbsp;err.flatten();<br />
-              &nbsp;&nbsp;<span class="text-slate-500">// Deeply nested issue tree</span><br />
-              &nbsp;&nbsp;err.format();<br />
-              &nbsp;&nbsp;<span class="text-slate-500">// Pretty CLI string format</span><br />
-              &nbsp;&nbsp;console.log(err.prettifyError());<br />
-              }
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- SECTION 9: SUMMARY & METADATA -->
-      <footer class="border-t border-slate-800 pt-8 no-break">
-        <div
-          class="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400 font-mono text-center sm:text-left"
-        >
-          <div class="flex items-center gap-2">
-            <img
-              src="https://res.cloudinary.com/drdfur81n/image/upload/v1786723815/SubAtom_short_logo_a3aa59.png"
-              alt="SubAtom Logo Mark"
-              class="h-4 w-4 object-contain"
-            />
-            <span>Generated by Subatom Library Architect Suite</span>
-          </div>
-          <div>MIT License • Strict TypeScript Architecture</div>
-        </div>
-      </footer>
+        </footer>
+      </main>
     </div>
+
+    <!-- CLIENT INTERACTIONS & LOGIC -->
+    <script>
+      // Package Manager Tabs
+      const commands = {
+        npm: "npm i subatom-infer",
+        pnpm: "pnpm add subatom-infer",
+        yarn: "yarn add subatom-infer",
+        bun: "bun add subatom-infer",
+      };
+
+      function setPkgManager(pkg) {
+        document.getElementById("pkgCommand").innerText = commands[pkg];
+        document.querySelectorAll(".pkg-tab").forEach((tab) => {
+          if (tab.innerText.toLowerCase() === pkg) {
+            tab.className = "pkg-tab active-pkg border-b-2 border-brand-500 text-brand-600 dark:text-brand-400 px-3 py-1.5 font-medium";
+          } else {
+            tab.className = "pkg-tab text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 px-3 py-1.5";
+          }
+        });
+      }
+
+      // Universal Copy-to-Clipboard with Toast Feedback
+      function copySnippet(elementId) {
+        const el = document.getElementById(elementId);
+        const text = el.innerText || el.textContent;
+        navigator.clipboard.writeText(text);
+      }
+
+      // Search bar filter
+      function filterSections(query) {
+        const q = query.toLowerCase().trim();
+        document.querySelectorAll(".doc-section").forEach((sec) => {
+          if (!q) {
+            sec.style.display = "";
+            return;
+          }
+          const text = sec.innerText.toLowerCase();
+          sec.style.display = text.includes(q) ? "" : "none";
+        });
+      }
+
+      // Hotkey for search
+      window.addEventListener("keydown", (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+          e.preventDefault();
+          document.getElementById("docSearch")?.focus();
+        }
+      });
+
+      // Dark / Light Theme Toggle & Persistence
+      function toggleTheme() {
+        const html = document.documentElement;
+        if (html.classList.contains("dark")) {
+          html.classList.remove("dark");
+          localStorage.setItem("theme", "light");
+        } else {
+          html.classList.add("dark");
+          localStorage.setItem("theme", "dark");
+        }
+      }
+
+      if (localStorage.getItem("theme") === "light") {
+        document.documentElement.classList.remove("dark");
+      }
+    </script>
   </body>
 </html>
