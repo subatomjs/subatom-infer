@@ -1,6 +1,6 @@
 // tests/nested-structures.test.ts
 import { infer } from "subatom-infer";
-import { assertFailure, assertSuccess } from "./assert-helpers.js";
+import { assertFailure } from "./assert-helpers.js";
 
 const WorkspaceSchema = infer.object({
   workspaceId: infer.uuid(),
