@@ -1,6 +1,6 @@
 {
   "name": "subatom-infer",
-  "version": "1.3.6",
+  "version": "1.3.7",
   "homepage": "https://infer.subatomjs.dev",
   "license": "MIT",
   "description": "Production-grade runtime validation and type-inference library for Node.js and TypeScript",
