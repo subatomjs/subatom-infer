@@ -30,7 +30,8 @@
     "test": "vitest run --coverage",
     "test:watch": "vitest",
     "lint": "eslint .",
-    "prepublishOnly": "npm run typecheck && npm run build && npm test"
+    "prepublishOnly": "npm run typecheck && npm run build && npm test",
+    "prepare": "husky"
   },
   "repository": {
     "type": "git",
@@ -44,6 +45,7 @@
     "@types/node": "^26.2.0",
     "@vitest/coverage-v8": "^4.1.11",
     "eslint": "^10.8.1",
+    "husky": "^9.1.7",
     "tsdown": "^0.22.14",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.67.0",
