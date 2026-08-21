@@ -1,3 +1,9 @@
+/*!
+ * subatom infer
+ * Copyright(c) 2026 Kunal Chandra Das
+ * MIT Licensed
+ */
+
 import { describe, it, expect } from "vitest";
 import { ObjectSchema, type RawShape } from "../../../src/schemas/composites/object.js";
 import { Schema } from "../../../src/core/schema.js";

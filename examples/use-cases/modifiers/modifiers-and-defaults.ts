@@ -1,4 +1,10 @@
-// tests/modifiers-and-defaults.test.ts
+/*!
+ * subatom infer
+ * Copyright(c) 2026 Kunal Chandra Das
+ * MIT Licensed
+ */
+
+
 import { infer } from "subatom-infer";
 
 // 1. Schema Definitions

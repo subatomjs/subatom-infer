@@ -1,4 +1,11 @@
-// tests/schema-constraints.test.ts
+/*!
+ * subatom infer
+ * Copyright(c) 2026 Kunal Chandra Das
+ * MIT Licensed
+ */
+
+
+
 import { infer, type Infer } from "subatom-infer";
 import { assertSuccess, assertFailure } from "./assert-helpers.js";
 

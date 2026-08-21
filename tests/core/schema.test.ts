@@ -1,3 +1,9 @@
+/*!
+ * subatom infer
+ * Copyright(c) 2026 Kunal Chandra Das
+ * MIT Licensed
+ */
+
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Use vi.hoisted so mock classes are initialized before vi.mock calls run

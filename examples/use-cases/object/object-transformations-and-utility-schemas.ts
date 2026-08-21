@@ -1,4 +1,11 @@
-// tests/object-transformations-and-utility-schemas.test.ts
+/*!
+ * subatom infer
+ * Copyright(c) 2026 Kunal Chandra Das
+ * MIT Licensed
+ */
+
+
+
 import { infer } from "subatom-infer";
 
 const BaseUser = infer.object({

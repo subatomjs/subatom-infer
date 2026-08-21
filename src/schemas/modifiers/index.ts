@@ -1,3 +1,10 @@
+/*!
+ * subatom infer
+ * Copyright(c) 2026 Kunal Chandra Das
+ * MIT Licensed
+ */
+
+
 import { schemaRegistry } from "../../core/schema.js";
 import { OptionalSchema } from "./optional.js";
 import { NullableSchema } from "./nullable.js";

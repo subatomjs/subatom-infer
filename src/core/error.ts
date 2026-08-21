@@ -1,3 +1,9 @@
+/*!
+ * subatom infer
+ * Copyright(c) 2026 Kunal Chandra Das
+ * MIT Licensed
+ */
+
 import type { ValidationIssue } from "./issue.js";
 
 export interface FormattedError {

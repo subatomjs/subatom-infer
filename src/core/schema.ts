@@ -1,3 +1,9 @@
+/*!
+ * subatom infer
+ * Copyright(c) 2026 Kunal Chandra Das
+ * MIT Licensed
+ */
+
 import { createParseContext, type ParseContext } from "./context.js";
 import { ValidationError } from "./error.js";
 import type { IssueData } from "./issue.js";

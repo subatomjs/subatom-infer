@@ -1,4 +1,11 @@
-// tests/primitives-and-unit-types.test.ts
+/*!
+ * subatom infer
+ * Copyright(c) 2026 Kunal Chandra Das
+ * MIT Licensed
+ */
+
+
+
 import { infer } from "subatom-infer";
 
 const PrimitivesSchema = infer.object({

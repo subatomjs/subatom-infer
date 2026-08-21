@@ -1,3 +1,9 @@
+/*!
+ * subatom infer
+ * Copyright(c) 2026 Kunal Chandra Das
+ * MIT Licensed
+ */
+
 import { describe, it, expect, expectTypeOf } from "vitest";
 import { DefaultSchema } from "../../../src/schemas/modifiers/default.js";
 import { Schema } from "../../../src/core/schema.js";

@@ -1,3 +1,10 @@
+/*!
+ * subatom infer
+ * Copyright(c) 2026 Kunal Chandra Das
+ * MIT Licensed
+ */
+
+
 /// <reference types="node" />
 
 import { infer } from "subatom-infer";

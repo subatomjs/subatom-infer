@@ -1,3 +1,9 @@
+/*!
+ * subatom infer
+ * Copyright(c) 2026 Kunal Chandra Das
+ * MIT Licensed
+ */
+
 import { describe, it, expect, vi } from "vitest";
 import { SuperRefineSchema } from "../../../src/schemas/modifiers/super-refine.js";
 import { Schema } from "../../../src/core/schema.js";

@@ -1,3 +1,9 @@
+/*!
+ * subatom infer
+ * Copyright(c) 2026 Kunal Chandra Das
+ * MIT Licensed
+ */
+
 import { describe, it, expectTypeOf, expect } from "vitest";
 import { ValidationError } from "../../src/core/error.js";
 import type {

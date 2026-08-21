@@ -1,3 +1,9 @@
+/*!
+ * subatom infer
+ * Copyright(c) 2026 Kunal Chandra Das
+ * MIT Licensed
+ */
+
 import type { Schema } from "./schema.js";
 
 export type Infer<S extends Schema<unknown, unknown>> = S["_output"];

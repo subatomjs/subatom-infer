@@ -6,7 +6,7 @@
     "Subatom-Infer-Sample"
   ],
   "license": "MIT",
-  "author": "Kunal Chandra Das <kunalchandradasofficial@gmail.com>",
+  "author": "Kunal Chandra Das <kunal@subatomjs.com>",
   "type": "module",
   "main": "index.js",
   "scripts": {

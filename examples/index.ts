@@ -1,4 +1,10 @@
-// Importing the unified namespace
+/*!
+ * subatom infer
+ * Copyright(c) 2026 Kunal Chandra Das
+ * MIT Licensed
+ */
+
+
 import { infer } from "subatom-infer";
 
 const User = infer.object({

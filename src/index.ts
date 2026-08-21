@@ -1,3 +1,9 @@
+/*!
+ * subatom infer
+ * Copyright(c) 2026 Kunal Chandra Das
+ * MIT Licensed
+ */
+
 // Initialize modifier registrations to enable fluent prototype chaining
 import "./schemas/modifiers/index.js";
 

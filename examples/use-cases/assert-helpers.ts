@@ -1,4 +1,10 @@
-// tests/assert-helpers.ts
+/*!
+ * subatom infer
+ * Copyright(c) 2026 Kunal Chandra Das
+ * MIT Licensed
+ */
+
+
 export function assertSuccess<T>(result: { success: boolean; data?: T; issues?: any[] }): T {
   if (!result.success || !result.data) {
     throw new Error(`Expected success, got failure: ${JSON.stringify(result.issues)}`);

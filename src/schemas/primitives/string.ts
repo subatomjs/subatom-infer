@@ -1,3 +1,10 @@
+/*!
+ * subatom infer
+ * Copyright(c) 2026 Kunal Chandra Das
+ * MIT Licensed
+ */
+
+
 import { Schema } from "../../core/schema.js";
 import { addIssue, type ParseContext } from "../../core/context.js";
 import { makeFailure, makeSuccess, type DynamicParseReturnType } from "../../core/result.js";
