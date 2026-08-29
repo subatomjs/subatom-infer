@@ -74,8 +74,9 @@ import {
 import {
   FunctionSchema,
   PromiseSchema,
-  FileSchema,
 } from "./schemas/spacial/spacial-schema.js";
+import { FilesSchema } from "./schemas/files/files.js";
+import { FileSchema } from "./schemas/files/file.js";
 
 /**
  * Dedicated schema for arbitrary boolean validation functions
@@ -83,7 +84,7 @@ import {
 export class CustomSchema<TOutput> extends Schema<TOutput, unknown> {
   constructor(
     readonly validator: (val: unknown) => boolean | Promise<boolean>,
-    readonly message: string = "Custom validation failed"
+    readonly message: string = "Custom validation failed",
   ) {
     super();
   }
@@ -93,7 +94,9 @@ export class CustomSchema<TOutput> extends Schema<TOutput, unknown> {
 
     if (isPromise(isValidOrPromise)) {
       if (!ctx.async) {
-        throw new Error("Asynchronous custom validator executed during synchronous parse.");
+        throw new Error(
+          "Asynchronous custom validator executed during synchronous parse.",
+        );
       }
       return isValidOrPromise.then((valid) => {
         if (!valid) {
@@ -113,6 +116,8 @@ export class CustomSchema<TOutput> extends Schema<TOutput, unknown> {
   }
 }
 
+export { FileSchema, FilesSchema };
+
 /**
  * Primary fluent API namespace for subatom-infer matching documentation specification
  */
@@ -123,7 +128,8 @@ export const infer = {
   bigint: (): BigIntSchema => new BigIntSchema(),
   boolean: (): BooleanSchema => new BooleanSchema(),
   date: (): DateSchema => new DateSchema(),
-  literal: <T extends LiteralValue>(value: T): LiteralSchema<T> => new LiteralSchema(value),
+  literal: <T extends LiteralValue>(value: T): LiteralSchema<T> =>
+    new LiteralSchema(value),
   null: (): NullSchema => new NullSchema(),
   undefined: (): UndefinedSchema => new UndefinedSchema(),
   void: (): UndefinedSchema => new UndefinedSchema(),
@@ -141,37 +147,42 @@ export const infer = {
   coerce,
 
   // Composites
-  object: <TShape extends RawShape>(shape: TShape): ObjectSchema<TShape, "strip", undefined> =>
-    new ObjectSchema(shape),
-  strictObject: <TShape extends RawShape>(shape: TShape): ObjectSchema<TShape, "strict", undefined> =>
+  object: <TShape extends RawShape>(
+    shape: TShape,
+  ): ObjectSchema<TShape, "strip", undefined> => new ObjectSchema(shape),
+  strictObject: <TShape extends RawShape>(
+    shape: TShape,
+  ): ObjectSchema<TShape, "strict", undefined> =>
     new ObjectSchema(shape, "strict"),
   passthroughObject: <TShape extends RawShape>(
-    shape: TShape
+    shape: TShape,
   ): ObjectSchema<TShape, "passthrough", undefined> =>
     new ObjectSchema(shape, "passthrough"),
-  array: <TOutput, TInput>(elementSchema: Schema<TOutput, TInput>): ArraySchema<TOutput, TInput> =>
-    new ArraySchema(elementSchema),
+  array: <TOutput, TInput>(
+    elementSchema: Schema<TOutput, TInput>,
+  ): ArraySchema<TOutput, TInput> => new ArraySchema(elementSchema),
   tuple: <TItems extends TupleSchemas>(schemas: TItems): TupleSchema<TItems> =>
     new TupleSchema(schemas),
   record: <
     TKey extends Schema<string | number | symbol, string | number | symbol>,
-    TValue extends Schema<unknown, unknown>
+    TValue extends Schema<unknown, unknown>,
   >(
     keySchema: TKey,
-    valueSchema: TValue
+    valueSchema: TValue,
   ): RecordSchema<TKey, TValue> => new RecordSchema(keySchema, valueSchema),
-  set: <TOutput, TInput>(valueSchema: Schema<TOutput, TInput>): SetSchema<TOutput, TInput> =>
-    new SetSchema(valueSchema),
+  set: <TOutput, TInput>(
+    valueSchema: Schema<TOutput, TInput>,
+  ): SetSchema<TOutput, TInput> => new SetSchema(valueSchema),
   map: <TKeyOutput, TKeyInput, TValOutput, TValInput>(
     keySchema: Schema<TKeyOutput, TKeyInput>,
-    valueSchema: Schema<TValOutput, TValInput>
+    valueSchema: Schema<TValOutput, TValInput>,
   ): MapSchema<TKeyOutput, TKeyInput, TValOutput, TValInput> =>
     new MapSchema(keySchema, valueSchema),
   enum: <const TValues extends readonly [string, ...string[]]>(
-    values: TValues
+    values: TValues,
   ): EnumSchema<TValues> => new EnumSchema(values),
   nativeEnum: <TEnum extends Record<string, string | number>>(
-    enumObj: TEnum
+    enumObj: TEnum,
   ): NativeEnumSchema<TEnum> => new NativeEnumSchema(enumObj),
 
   // Combinators
@@ -186,55 +197,63 @@ export const infer = {
   },
   discriminatedUnion: <
     TDiscriminator extends string,
-    TOptions extends readonly ObjectSchema<RawShape>[]
+    TOptions extends readonly ObjectSchema<RawShape>[],
   >(
     discriminator: TDiscriminator,
-    options: TOptions
+    options: TOptions,
   ): DiscriminatedUnionSchema<TDiscriminator, TOptions> =>
     new DiscriminatedUnionSchema(discriminator, options),
   intersection: <
     TLeft extends Schema<unknown, unknown>,
-    TRight extends Schema<unknown, unknown>
+    TRight extends Schema<unknown, unknown>,
   >(
     left: TLeft,
-    right: TRight
+    right: TRight,
   ): IntersectionSchema<TLeft, TRight> => new IntersectionSchema(left, right),
   lazy: <TOutput, TInput = TOutput>(
-    getter: () => Schema<TOutput, TInput>
+    getter: () => Schema<TOutput, TInput>,
   ): LazySchema<TOutput, TInput> => new LazySchema(getter),
 
   // Modifiers & Transforms
   preprocess: <TOutput, TInput>(
     fn: (input: unknown) => unknown,
-    schema: Schema<TOutput, TInput>
+    schema: Schema<TOutput, TInput>,
   ): PreprocessSchema<TOutput, TInput> => new PreprocessSchema(fn, schema),
-  pipe: <A, B, C>(first: Schema<B, A>, second: Schema<C, B>): PipeSchema<A, B, C> =>
-    new PipeSchema(first, second),
+  pipe: <A, B, C>(
+    first: Schema<B, A>,
+    second: Schema<C, B>,
+  ): PipeSchema<A, B, C> => new PipeSchema(first, second),
   brand: <TOutput, TInput, TBrand extends string | symbol>(
     schema: Schema<TOutput, TInput>,
-    name: TBrand
+    name: TBrand,
   ): BrandSchema<TOutput, TInput, TBrand> => new BrandSchema(schema, name),
   codec: <TOutput, TInput = TOutput>(
     decoder: Schema<TOutput, TInput>,
-    encoder: (output: TOutput) => TInput
+    encoder: (output: TOutput) => TInput,
   ): Codec<TOutput, TInput> => new Codec(decoder, encoder),
   custom: <TOutput = unknown>(
     validator: (val: unknown) => boolean | Promise<boolean>,
-    message = "Custom validation failed"
+    message = "Custom validation failed",
   ): CustomSchema<TOutput> => new CustomSchema<TOutput>(validator, message),
 
   // Special
   function: <
     TArgs extends TupleSchemas = TupleSchemas,
-    TReturn extends Schema<unknown, unknown> = Schema<unknown, unknown>
+    TReturn extends Schema<unknown, unknown> = Schema<unknown, unknown>,
   >(
     args: TupleSchema<TArgs> = new TupleSchema([] as unknown as TArgs),
-    returns: TReturn = new UnknownSchema() as unknown as TReturn
+    returns: TReturn = new UnknownSchema() as unknown as TReturn,
   ): FunctionSchema<TArgs, TReturn> => new FunctionSchema(args, returns),
   promise: <TValueSchema extends Schema<unknown, unknown>>(
-    schema: TValueSchema
+    schema: TValueSchema,
   ): PromiseSchema<TValueSchema> => new PromiseSchema(schema),
-  file: (): FileSchema => new FileSchema(),
+  file(): FileSchema {
+    return new FileSchema();
+  },
+
+  files(): FilesSchema {
+    return new FilesSchema();
+  },
 } as const;
 
 // Backward compatibility alias

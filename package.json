@@ -1,6 +1,6 @@
 {
   "name": "subatom-infer",
-  "version": "1.3.7",
+  "version": "1.3.8",
   "homepage": "https://infer.subatomjs.dev",
   "license": "MIT",
   "description": "Production-grade runtime validation and type-inference library for Node.js and TypeScript",
@@ -30,7 +30,7 @@
     "test": "vitest run --coverage",
     "test:watch": "vitest",
     "lint": "eslint .",
-    "prepublishOnly": "npm run typecheck && npm run build && npm test",
+    "prepublishOnly": "rm -rf dist && npm run typecheck && npm run build && npm test",
     "prepare": "husky"
   },
   "repository": {

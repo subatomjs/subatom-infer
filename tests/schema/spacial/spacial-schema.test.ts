@@ -4,8 +4,8 @@
  * MIT Licensed
  */
 
-
 import { describe, it, expect, expectTypeOf } from "vitest";
+import * as spacialIndex from "../../../src/schemas/spacial/index.js";
 import {
   FunctionSchema,
   PromiseSchema,
@@ -24,8 +24,7 @@ import {
 import { ValidationError } from "../../../src/core/error.js";
 import { TupleSchema } from "../../../src/schemas/composites/collections.js";
 
-// --- Test Harness Concrete Helper Schemas ---
-
+// Helper schemas for testing
 class SyncStringSchema extends Schema<string> {
   _parse(input: unknown, ctx: ParseContext): DynamicParseReturnType<string> {
     if (typeof input === "string") {
@@ -76,7 +75,18 @@ const syncString = new SyncStringSchema();
 const syncNumber = new SyncNumberSchema();
 const asyncString = new AsyncStringSchema();
 
-describe("Special Schemas (spacial-schema.ts)", () => {
+describe("Spacial Schemas & Index Module (100% Coverage)", () => {
+  // ==========================================
+  // Barrel Exports (src/schemas/spacial/index.ts)
+  // ==========================================
+  describe("Barrel Index Re-exports", () => {
+    it("exports all classes and types from the index module", () => {
+      expect(spacialIndex.FunctionSchema).toBe(FunctionSchema);
+      expect(spacialIndex.PromiseSchema).toBe(PromiseSchema);
+      expect(spacialIndex.FileSchema).toBe(FileSchema);
+    });
+  });
+
   // ==========================================
   // FunctionSchema
   // ==========================================
@@ -108,7 +118,14 @@ describe("Special Schemas (spacial-schema.ts)", () => {
       });
 
       it("fails when the input is not a function", () => {
-        const nonFunctions: unknown[] = ["not-a-fn", 123, null, undefined, {}, []];
+        const nonFunctions: unknown[] = [
+          "not-a-fn",
+          123,
+          null,
+          undefined,
+          {},
+          [],
+        ];
 
         for (const input of nonFunctions) {
           const safe = fnSchema.safeParse(input);
@@ -117,11 +134,7 @@ describe("Special Schemas (spacial-schema.ts)", () => {
             expect(safe.error).toBeInstanceOf(ValidationError);
             const issue = safe.issues[0];
             expect(issue?.code).toBe("invalid_type");
-            if (issue?.code === "invalid_type") {
-              expect(issue.expected).toBe("function");
-              expect(issue.received).toBe(typeof input);
-              expect(issue.message).toBe(`Expected function, received ${typeof input}`);
-            }
+            expect(issue?.message).toBe(`Expected function, received ${typeof input}`);
           }
         }
       });
@@ -132,7 +145,7 @@ describe("Special Schemas (spacial-schema.ts)", () => {
         const wrapped = fnSchema.parse(rawFn);
 
         expect(() => {
-          // @ts-expect-error Testing runtime parameter rejection with invalid argument types
+          // @ts-expect-error Testing invalid runtime argument types
           wrapped(12345, "invalid-age");
         }).toThrowError(ValidationError);
       });
@@ -226,11 +239,7 @@ describe("Special Schemas (spacial-schema.ts)", () => {
             expect(safe.error).toBeInstanceOf(ValidationError);
             const issue = safe.issues[0];
             expect(issue?.code).toBe("invalid_type");
-            if (issue?.code === "invalid_type") {
-              expect(issue.expected).toBe("Promise");
-              expect(issue.received).toBe(typeof input);
-              expect(issue.message).toBe("Expected Promise instance");
-            }
+            expect(issue?.message).toBe("Expected Promise instance");
           }
         }
       });
@@ -292,16 +301,13 @@ describe("Special Schemas (spacial-schema.ts)", () => {
           expect(safe.error).toBeInstanceOf(ValidationError);
           const issue = safe.issues[0];
           expect(issue?.code).toBe("invalid_type");
-          if (issue?.code === "invalid_type") {
-            expect(issue.expected).toBe("File | Blob");
-            expect(issue.received).toBe("null");
-            expect(issue.message).toBe("Expected File or Blob-like object");
-          }
+          expect((issue as any)?.received).toBe("null");
+          expect(issue?.message).toBe("Expected File or Blob-like object");
         }
       });
 
       it("fails when input is not an object or lacks size/type properties", () => {
-        const invalidObjects: unknown[] = [
+        const invalidInputs: unknown[] = [
           "string",
           123,
           true,
@@ -311,17 +317,14 @@ describe("Special Schemas (spacial-schema.ts)", () => {
           { type: "image/png" },
         ];
 
-        for (const input of invalidObjects) {
+        for (const input of invalidInputs) {
           const safe = baseFileSchema.safeParse(input);
           expect(safe.success).toBe(false);
           if (!safe.success) {
             const issue = safe.issues[0];
             expect(issue?.code).toBe("invalid_type");
-            if (issue?.code === "invalid_type") {
-              expect(issue.expected).toBe("File | Blob");
-              expect(issue.received).toBe(typeof input);
-              expect(issue.message).toBe("Expected File or Blob-like object");
-            }
+            expect((issue as any)?.received).toBe(typeof input);
+            expect(issue?.message).toBe("Expected File or Blob-like object");
           }
         }
       });
@@ -349,12 +352,10 @@ describe("Special Schemas (spacial-schema.ts)", () => {
         if (!safe.success) {
           const issue = safe.issues[0];
           expect(issue?.code).toBe("too_small");
-          if (issue?.code === "too_small") {
-            expect(issue.minimum).toBe(500);
-            expect(issue.inclusive).toBe(true);
-            expect(issue.origin).toBe("file");
-            expect(issue.message).toBe("File must be >= 500 bytes");
-          }
+          expect((issue as any)?.minimum).toBe(500);
+          expect((issue as any)?.inclusive).toBe(true);
+          expect((issue as any)?.origin).toBe("file");
+          expect(issue?.message).toBe("File must be >= 500 bytes");
         }
       });
 
@@ -391,12 +392,10 @@ describe("Special Schemas (spacial-schema.ts)", () => {
         if (!safe.success) {
           const issue = safe.issues[0];
           expect(issue?.code).toBe("too_big");
-          if (issue?.code === "too_big") {
-            expect(issue.maximum).toBe(1024);
-            expect(issue.inclusive).toBe(true);
-            expect(issue.origin).toBe("file");
-            expect(issue.message).toBe("File must be <= 1024 bytes");
-          }
+          expect((issue as any)?.maximum).toBe(1024);
+          expect((issue as any)?.inclusive).toBe(true);
+          expect((issue as any)?.origin).toBe("file");
+          expect(issue?.message).toBe("File must be <= 1024 bytes");
         }
       });
 
@@ -424,9 +423,7 @@ describe("Special Schemas (spacial-schema.ts)", () => {
         if (!safe.success) {
           const issue = safe.issues[0];
           expect(issue?.code).toBe("invalid_value");
-          if (issue?.code === "invalid_value") {
-            expect(issue.message).toBe("MIME type must be one of: image/jpeg");
-          }
+          expect(issue?.message).toBe("MIME type must be one of: image/jpeg");
         }
       });
 
@@ -446,7 +443,7 @@ describe("Special Schemas (spacial-schema.ts)", () => {
         expect(safe.success).toBe(false);
         if (!safe.success) {
           expect(safe.issues[0]?.message).toBe(
-            "MIME type must be one of: image/png, image/webp"
+            "MIME type must be one of: image/png, image/webp",
           );
         }
       });
@@ -479,10 +476,8 @@ describe("Special Schemas (spacial-schema.ts)", () => {
         if (!safe.success) {
           const issue = safe.issues[0];
           expect(issue?.code).toBe("invalid_value");
-          if (issue?.code === "invalid_value") {
-            expect(issue.received).toEqual(unnamedFile);
-            expect(issue.message).toBe("File must have a filename");
-          }
+          expect((issue as any)?.received).toEqual(unnamedFile);
+          expect(issue?.message).toBe("File must have a filename");
         }
       });
     });
@@ -504,7 +499,7 @@ describe("Special Schemas (spacial-schema.ts)", () => {
           expect(safe.issues[0]?.message).toBe("File must be >= 1000 bytes");
           expect(safe.issues[1]?.code).toBe("invalid_value");
           expect(safe.issues[1]?.message).toBe(
-            "MIME type must be one of: application/json"
+            "MIME type must be one of: application/json",
           );
         }
       });

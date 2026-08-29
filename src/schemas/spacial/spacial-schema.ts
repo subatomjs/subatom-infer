@@ -19,6 +19,7 @@ import {
   type InferTupleOutput,
 } from "../composites/collections.js";
 
+
 export class FunctionSchema<
   TArgs extends TupleSchemas,
   TReturn extends Schema<unknown, unknown>
@@ -108,19 +109,23 @@ export class PromiseSchema<
   }
 }
 
+
+
+//! Depricated code 
 export interface FileValue {
   readonly size: number;
   readonly type: string;
   readonly name?: string;
   readonly [key: string]: unknown;
 }
-
+//! Depricated code 
 export interface FileCheck {
   readonly kind: string;
   readonly validate: (file: FileValue) => boolean;
   readonly message: string;
 }
 
+//! Depricated code 
 export class FileSchema extends Schema<FileValue, FileValue> {
   readonly checks: readonly FileCheck[];
 

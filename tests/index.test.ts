@@ -4,7 +4,6 @@
  * MIT Licensed
  */
 
-
 import { describe, it, expect, expectTypeOf } from "vitest";
 import infer, {
   s,
@@ -47,7 +46,6 @@ import infer, {
   type Input,
   type Output,
 } from "../src/index.js";
-import type { RawShape } from "../src/schemas/composites/object.js";
 
 describe("Root Index & infer Facade (src/index.ts)", () => {
   // ==========================================
@@ -88,14 +86,16 @@ describe("Root Index & infer Facade (src/index.ts)", () => {
   describe("CustomSchema & infer.custom()", () => {
     it("parses valid input synchronously when validator returns true", () => {
       const customString = infer.custom<string>(
-        (val) => typeof val === "string" && val.length > 2
+        (val) => typeof val === "string" && val.length > 2,
       );
       expect(customString).toBeInstanceOf(CustomSchema);
       expect(customString.parse("hello")).toBe("hello");
     });
 
     it("fails synchronously with default message when validator returns false", () => {
-      const customNum = infer.custom<number>((val) => typeof val === "number" && val > 0);
+      const customNum = infer.custom<number>(
+        (val) => typeof val === "number" && val > 0,
+      );
       const safe = customNum.safeParse(-1);
 
       expect(safe.success).toBe(false);
@@ -108,7 +108,7 @@ describe("Root Index & infer Facade (src/index.ts)", () => {
     it("fails synchronously with custom error message when provided", () => {
       const customSchema = infer.custom<string>(
         (val) => val === "allowed",
-        "Value is strictly forbidden"
+        "Value is strictly forbidden",
       );
       const safe = customSchema.safeParse("disallowed");
 
@@ -121,7 +121,7 @@ describe("Root Index & infer Facade (src/index.ts)", () => {
     it("throws Error when async validator is executed during synchronous parse()", () => {
       const asyncCustom = infer.custom<string>(async (val) => val === "valid");
       expect(() => asyncCustom.parse("valid")).toThrowError(
-        "Asynchronous custom validator executed during synchronous parse."
+        "Asynchronous custom validator executed during synchronous parse.",
       );
     });
 
@@ -136,13 +136,10 @@ describe("Root Index & infer Facade (src/index.ts)", () => {
     });
 
     it("fails asynchronously with custom message via safeParseAsync()", async () => {
-      const asyncCustom = infer.custom<string>(
-        async (val) => {
-          await new Promise((res) => setTimeout(res, 2));
-          return val === "ok";
-        },
-        "Async check rejected"
-      );
+      const asyncCustom = infer.custom<string>(async (val) => {
+        await new Promise((res) => setTimeout(res, 2));
+        return val === "ok";
+      }, "Async check rejected");
 
       const safe = await asyncCustom.safeParseAsync("bad");
       expect(safe.success).toBe(false);
@@ -189,7 +186,7 @@ describe("Root Index & infer Facade (src/index.ts)", () => {
   describe("Direct Format Shortcuts", () => {
     it("validates formats with default messages", () => {
       expect(infer.uuid().parse("123e4567-e89b-12d3-a456-426614174000")).toBe(
-        "123e4567-e89b-12d3-a456-426614174000"
+        "123e4567-e89b-12d3-a456-426614174000",
       );
       expect(infer.email().parse("dev@domain.com")).toBe("dev@domain.com");
     });
@@ -275,14 +272,18 @@ describe("Root Index & infer Facade (src/index.ts)", () => {
       expect(arrayUnion.parse("test")).toBe("test");
       expect(arrayUnion.parse(10)).toBe(10);
 
-      const restUnion = infer.union(infer.string(), infer.number(), infer.boolean());
+      const restUnion = infer.union(
+        infer.string(),
+        infer.number(),
+        infer.boolean(),
+      );
       expect(restUnion).toBeInstanceOf(UnionSchema);
       expect(restUnion.parse(true)).toBe(true);
       expect(restUnion.parse("str")).toBe("str");
       expect(restUnion.parse(5)).toBe(5);
     });
 
-it("instantiates discriminatedUnion, intersection, and lazy schemas", () => {
+    it("instantiates discriminatedUnion, intersection, and lazy schemas", () => {
       const square = infer.object({
         kind: infer.literal("square"),
         size: infer.number(),
@@ -304,7 +305,7 @@ it("instantiates discriminatedUnion, intersection, and lazy schemas", () => {
 
       const inter = infer.intersection(
         infer.object({ a: infer.string() }),
-        infer.object({ b: infer.number() })
+        infer.object({ b: infer.number() }),
       );
       expect(inter).toBeInstanceOf(IntersectionSchema);
       expect(inter.parse({ a: "test", b: 123 })).toEqual({ a: "test", b: 123 });
@@ -314,7 +315,7 @@ it("instantiates discriminatedUnion, intersection, and lazy schemas", () => {
         infer.object({
           value: infer.string(),
           child: treeSchema.optional(),
-        })
+        }),
       );
       expect(treeSchema).toBeInstanceOf(LazySchema);
       expect(treeSchema.parse({ value: "root" })).toEqual({
@@ -335,7 +336,7 @@ it("instantiates discriminatedUnion, intersection, and lazy schemas", () => {
 
       const piped = infer.pipe(
         infer.string(),
-        infer.preprocess((v) => Number(v), infer.number())
+        infer.preprocess((v) => Number(v), infer.number()),
       );
       expect(piped).toBeInstanceOf(PipeSchema);
       expect(piped.parse("42")).toBe(42);
@@ -346,7 +347,7 @@ it("instantiates discriminatedUnion, intersection, and lazy schemas", () => {
 
       const codecInstance = infer.codec(
         infer.preprocess((v) => Number(v), infer.number()),
-        (output: number) => String(output)
+        (output: number) => String(output),
       );
       expect(codecInstance).toBeInstanceOf(Codec);
       expect(codecInstance.parse("100")).toBe(100);
@@ -366,7 +367,7 @@ it("instantiates discriminatedUnion, intersection, and lazy schemas", () => {
 
       const mathFn = infer.function(
         infer.tuple([infer.number(), infer.number()] as const),
-        infer.number()
+        infer.number(),
       );
       expect(mathFn).toBeInstanceOf(FunctionSchema);
       const add = mathFn.parse((a: number, b: number) => a + b);
@@ -381,10 +382,15 @@ it("instantiates discriminatedUnion, intersection, and lazy schemas", () => {
 
       const fileInst = infer.file();
       expect(fileInst).toBeInstanceOf(FileSchema);
-      expect(fileInst.parse({ size: 100, type: "image/png" })).toEqual({
+
+      const validUpload = {
+        filename: "test.png",
+        encoding: "7bit",
+        mimetype: "image/png",
+        storageType: "memory" as const,
         size: 100,
-        type: "image/png",
-      });
+      };
+      expect(fileInst.parse(validUpload)).toEqual(validUpload);
     });
   });
 
@@ -399,7 +405,7 @@ it("instantiates discriminatedUnion, intersection, and lazy schemas", () => {
       expect(infer.coerce.boolean().parse("true")).toBe(true);
       expect(infer.coerce.bigint().parse("300")).toBe(300n);
       expect(
-        infer.coerce.date().parse("2026-08-20T12:00:00.000Z")
+        infer.coerce.date().parse("2026-08-20T12:00:00.000Z"),
       ).toBeInstanceOf(Date);
     });
   });
