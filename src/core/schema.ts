@@ -8,6 +8,7 @@ import { createParseContext, type ParseContext } from "./context.js";
 import { ValidationError } from "./error.js";
 import type { IssueData } from "./issue.js";
 import {
+  makeFailure,
   isPromise,
   type DynamicParseReturnType,
   type ParseResult,
@@ -121,7 +122,7 @@ export abstract class Schema<TOutput, TInput = TOutput> {
       return result;
     } catch (error) {
       if (error instanceof ValidationError) {
-        return<any> { success: false, issues: error.issues };
+          return makeFailure(error.issues);
       }
       throw error;
     }
@@ -133,7 +134,7 @@ export abstract class Schema<TOutput, TInput = TOutput> {
       return await Promise.resolve(this._parse(input, ctx));
     } catch (error:unknown) {
       if (error instanceof ValidationError) {
-        return<any> { success: false, issues: error.issues };
+        return makeFailure(error.issues);
       }
       throw error;
     }

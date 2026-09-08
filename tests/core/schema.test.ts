@@ -289,6 +289,8 @@ describe("Schema Abstract Class", () => {
       expect(res.success).toBe(false);
       if (!res.success) {
         expect(res.issues).toHaveLength(1);
+        expect(res.error).toBeInstanceOf(ValidationError);
+        expect(res.error.issues).toEqual(res.issues);
       }
     });
 
@@ -305,6 +307,8 @@ describe("Schema Abstract Class", () => {
       expect(res.success).toBe(false);
       if (!res.success) {
         expect(res.issues[0]?.message).toBe("Thrown ValidationError directly");
+        expect(res.error).toBeInstanceOf(ValidationError);
+        expect(res.error.issues).toEqual(res.issues);
       }
     });
 
@@ -354,6 +358,8 @@ describe("Schema Abstract Class", () => {
       expect(res.success).toBe(false);
       if (!res.success) {
         expect(res.issues[0]?.message).toBe("Thrown ValidationError directly");
+        expect(res.error).toBeInstanceOf(ValidationError);
+        expect(res.error.issues).toEqual(res.issues);
       }
     });
 

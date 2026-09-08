@@ -96,6 +96,16 @@ describe("FilesSchema Unit Tests (100% Coverage)", () => {
       }
     });
 
+    it("reports array entries with the array received type", () => {
+      const safe = new FilesSchema().safeParse([[]]);
+
+      expect(safe.success).toBe(false);
+      if (!safe.success) {
+        expect(safe.issues[0]?.code).toBe("invalid_type");
+        expect((safe.issues[0] as any)?.received).toBe("array");
+      }
+    });
+
     it("accepts full valid UploadFileOptions with all optional properties", async () => {
       const schema = new FilesSchema();
       const fullFile: UploadFileOptions = {

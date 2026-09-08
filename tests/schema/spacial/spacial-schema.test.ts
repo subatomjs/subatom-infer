@@ -23,6 +23,7 @@ import {
 } from "../../../src/core/result.js";
 import { ValidationError } from "../../../src/core/error.js";
 import { TupleSchema } from "../../../src/schemas/composites/collections.js";
+import { TransformSchema } from "../../../src/schemas/modifiers/transform.js";
 
 // Helper schemas for testing
 class SyncStringSchema extends Schema<string> {
@@ -157,6 +158,36 @@ describe("Spacial Schemas & Index Module (100% Coverage)", () => {
         expect(() => {
           wrapped("Bob", 25);
         }).toThrowError(ValidationError);
+      });
+
+      it("supports asynchronous argument validation and return transforms", async () => {
+        const asyncArgsSchema = new FunctionSchema(
+          new TupleSchema([asyncString] as const),
+          new TransformSchema(syncString, async (value) => `${value}!`),
+        );
+        const wrapped = asyncArgsSchema.parse((value: unknown) => value);
+
+        await expect(wrapped("hello")).resolves.toBe("HELLO!");
+      });
+
+      it("rejects asynchronously when wrapped arguments or return values are invalid", async () => {
+        const asyncArgsSchema = new FunctionSchema(
+          new TupleSchema([asyncString] as const),
+          syncString,
+        );
+        const wrapped = asyncArgsSchema.parse((_value: unknown) => 123);
+
+        await expect(wrapped(123 as never)).rejects.toThrowError(ValidationError);
+      });
+
+      it("rejects when an asynchronous return transform fails validation", async () => {
+        const asyncReturnSchema = new FunctionSchema(
+          new TupleSchema([syncString] as const),
+          asyncString,
+        );
+        const wrapped = asyncReturnSchema.parse(() => 123);
+
+        await expect(wrapped("hello")).rejects.toThrowError(ValidationError);
       });
     });
 

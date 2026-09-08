@@ -120,6 +120,22 @@ describe("Collection Schemas", () => {
       }
     });
 
+    it("supports custom array checks without numeric limits", () => {
+      const schema = new ArraySchema(new SyncStringSchema(), [
+        { kind: "min", validate: () => false, message: "minimum failed" },
+        { kind: "max", validate: () => false, message: "maximum failed" },
+      ]);
+      const safe = schema.safeParse(["value"]);
+
+      expect(safe.success).toBe(false);
+      if (!safe.success) {
+        expect(safe.issues[0]?.code).toBe("too_small");
+        expect(safe.issues[1]?.code).toBe("too_big");
+        expect(safe.issues[0]).not.toHaveProperty("minimum");
+        expect(safe.issues[1]).not.toHaveProperty("maximum");
+      }
+    });
+
     it("collects nested element issues with correct indexed path", () => {
       const safe = stringArray.safeParse(["valid", 123, "also valid", true]);
       expect(safe.success).toBe(false);
@@ -404,6 +420,33 @@ describe("Collection Schemas", () => {
   describe("SetSchema", () => {
     const syncSet = new SetSchema(new SyncStringSchema());
     const asyncSet = new SetSchema(new AsyncStringSchema());
+
+    it("supports custom set checks without numeric limits", () => {
+      const schema = new SetSchema(new SyncStringSchema(), [
+        { kind: "min", validate: () => false, message: "minimum failed" },
+        { kind: "max", validate: () => false, message: "maximum failed" },
+      ]);
+      const safe = schema.safeParse(new Set(["value"]));
+
+      expect(safe.success).toBe(false);
+      if (!safe.success) {
+        expect(safe.issues[0]?.code).toBe("too_small");
+        expect(safe.issues[1]?.code).toBe("too_big");
+        expect(safe.issues[0]).not.toHaveProperty("minimum");
+        expect(safe.issues[1]).not.toHaveProperty("maximum");
+      }
+    });
+
+    it("uses the default message for max size checks", () => {
+      const safe = new SetSchema(new SyncStringSchema())
+        .max(2)
+        .safeParse(new Set(["one", "two", "three"]));
+
+      expect(safe.success).toBe(false);
+      if (!safe.success) {
+        expect(safe.issues[0]?.message).toBe("Set must contain at most 2 element(s)");
+      }
+    });
 
     it("parses valid Set instances synchronously", () => {
       const res = syncSet.parse(new Set(["alpha", "beta"]));

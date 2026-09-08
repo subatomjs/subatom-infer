@@ -41,6 +41,7 @@ import infer, {
   FunctionSchema,
   PromiseSchema,
   FileSchema,
+  FilesSchema,
   CustomSchema,
   type Infer,
   type Input,
@@ -382,6 +383,7 @@ describe("Root Index & infer Facade (src/index.ts)", () => {
 
       const fileInst = infer.file();
       expect(fileInst).toBeInstanceOf(FileSchema);
+      expect(infer.files()).toBeInstanceOf(FilesSchema);
 
       const validUpload = {
         filename: "test.png",

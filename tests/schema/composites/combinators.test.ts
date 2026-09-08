@@ -385,6 +385,14 @@ describe("Combinators Schemas (combinators.ts)", () => {
     });
 
     describe("Synchronous Intersection Parsing", () => {
+      it("rejects when an intersection branch returns a Promise", () => {
+        const intersection = new IntersectionSchema(asyncString, syncNumber);
+
+        expect(() => intersection.parse("value")).toThrowError(
+          "Synchronous parse encountered async intersection branches."
+        );
+      });
+
       it("parses and merges objects synchronously when both succeed", () => {
         const intersection = new IntersectionSchema(leftObj, rightObj);
         expect(intersection.parse({ a: "test", b: 123 })).toEqual({

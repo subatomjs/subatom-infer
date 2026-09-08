@@ -6,13 +6,19 @@
 
 
 import { Schema } from "../../core/schema.js";
-import { addIssue, type ParseContext } from "../../core/context.js";
+import {
+  addIssue,
+  createParseContext,
+  type ParseContext,
+} from "../../core/context.js";
 import {
   makeFailure,
   makeSuccess,
   isPromise,
   type DynamicParseReturnType,
+  type ParseResult,
 } from "../../core/result.js";
+import { ValidationError } from "../../core/error.js";
 import {
   TupleSchema,
   type TupleSchemas,
@@ -50,12 +56,36 @@ export class FunctionSchema<
 
     const targetFn = input as (...args: unknown[]) => unknown;
 
-    const validatedWrapper = (
-      ...args: InferTupleOutput<TArgs>
-    ): TReturn["_output"] => {
-      const validatedArgs = this.argsSchema.parse(args);
-      const result = targetFn(...(validatedArgs as unknown[]));
-      return this.returnSchema.parse(result);
+    const validatedWrapper = (...args: InferTupleOutput<TArgs>): TReturn["_output"] => {
+      const argsResult = this.argsSchema._parse(args, createParseContext(true));
+
+      const parseReturn = (validatedArgs: unknown[]): TReturn["_output"] => {
+        const result = targetFn(...validatedArgs);
+        const returnResult = this.returnSchema._parse(
+          result,
+          createParseContext(true),
+        );
+
+        if (isPromise(returnResult)) {
+          return returnResult.then((parsed: ParseResult<TReturn["_output"]>) => {
+            if (!parsed.success) throw new ValidationError(parsed.issues);
+            return parsed.data;
+          }) as TReturn["_output"];
+        }
+
+        if (!returnResult.success) throw new ValidationError(returnResult.issues);
+        return returnResult.data;
+      };
+
+      if (isPromise(argsResult)) {
+        return argsResult.then((parsed: ParseResult<unknown>) => {
+          if (!parsed.success) throw new ValidationError(parsed.issues);
+          return parseReturn(parsed.data as unknown[]);
+        }) as TReturn["_output"];
+      }
+
+      if (!argsResult.success) throw new ValidationError(argsResult.issues);
+      return parseReturn(argsResult.data as unknown[]);
     };
 
     return makeSuccess(validatedWrapper);
@@ -111,21 +141,21 @@ export class PromiseSchema<
 
 
 
-//! Depricated code 
+//! Depricated code
 export interface FileValue {
   readonly size: number;
   readonly type: string;
   readonly name?: string;
   readonly [key: string]: unknown;
 }
-//! Depricated code 
+//! Depricated code
 export interface FileCheck {
   readonly kind: string;
   readonly validate: (file: FileValue) => boolean;
   readonly message: string;
 }
 
-//! Depricated code 
+//! Depricated code
 export class FileSchema extends Schema<FileValue, FileValue> {
   readonly checks: readonly FileCheck[];
 
