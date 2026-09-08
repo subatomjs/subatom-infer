@@ -29,12 +29,12 @@ jobs:
         run: |
           PACKAGE_NAME=$(node -p "require('./package.json').name")
           CURRENT_VERSION=$(node -p "require('./package.json').version")
-          
+
           # Check if this specific version already exists on npm
           VERSION_EXISTS=$(npm view "${PACKAGE_NAME}@${CURRENT_VERSION}" version 2>/dev/null || echo "")
-          
+
           echo "Current version in repo: $CURRENT_VERSION"
-          
+
           if [ -z "$VERSION_EXISTS" ]; then
             echo "is_new_version=true" >> "$GITHUB_OUTPUT"
             echo "Version $CURRENT_VERSION is new. Proceeding with publish."
@@ -45,7 +45,7 @@ jobs:
 
       - name: Install dependencies
         if: steps.check_version.outputs.is_new_version == 'true'
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Lint
         if: steps.check_version.outputs.is_new_version == 'true'
